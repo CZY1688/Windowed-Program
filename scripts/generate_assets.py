@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT_BMP_DIR = ROOT / "assets" / "pomodoro_frames"
 OUT_ICO_PATH = ROOT / "main.ico"
-EPSILON = 1e-6
+DIVISION_EPSILON = 1e-6
 
 
 def ensure_dir(path: Path) -> None:
@@ -16,10 +16,12 @@ def ensure_dir(path: Path) -> None:
 
 
 def create_canvas(w: int, h: int, color=(255, 255, 255, 255)):
+    """Create a w*h RGBA canvas initialized with a single color."""
     return [[list(color) for _ in range(w)] for _ in range(h)]
 
 
 def set_px(canvas, x: int, y: int, color):
+    """Set one pixel with bounds checking."""
     h = len(canvas)
     w = len(canvas[0])
     if 0 <= x < w and 0 <= y < h:
@@ -27,6 +29,7 @@ def set_px(canvas, x: int, y: int, color):
 
 
 def fill_circle(canvas, cx: float, cy: float, r: float, color):
+    """Raster-fill a circle by distance test from center."""
     x0 = max(0, int(cx - r - 1))
     x1 = min(len(canvas[0]) - 1, int(cx + r + 1))
     y0 = max(0, int(cy - r - 1))
@@ -41,19 +44,21 @@ def fill_circle(canvas, cx: float, cy: float, r: float, color):
 
 
 def fill_ellipse(canvas, cx: float, cy: float, rx: float, ry: float, color):
+    """Raster-fill an ellipse by normalized radius equation."""
     x0 = max(0, int(cx - rx - 1))
     x1 = min(len(canvas[0]) - 1, int(cx + rx + 1))
     y0 = max(0, int(cy - ry - 1))
     y1 = min(len(canvas) - 1, int(cy + ry + 1))
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
-            dx = (x - cx) / max(rx, EPSILON)
-            dy = (y - cy) / max(ry, EPSILON)
+            dx = (x - cx) / max(rx, DIVISION_EPSILON)
+            dy = (y - cy) / max(ry, DIVISION_EPSILON)
             if dx * dx + dy * dy <= 1.0:
                 set_px(canvas, x, y, color)
 
 
 def draw_tomato(canvas, phase: float):
+    """Draw one animation frame of a tomato with phase in [0,1)."""
     h = len(canvas)
     w = len(canvas[0])
     cx, cy = w / 2, h / 2 + 6
@@ -86,6 +91,7 @@ def draw_tomato(canvas, phase: float):
 
 
 def write_bmp(canvas, out_path: Path):
+    """Write canvas to uncompressed 24-bit BMP (bottom-up rows)."""
     h = len(canvas)
     w = len(canvas[0])
     row_size = ((24 * w + 31) // 32) * 4
@@ -123,6 +129,7 @@ def write_bmp(canvas, out_path: Path):
 
 
 def build_icon_pixels(size: int):
+    """Build a static tomato icon canvas at the target size."""
     canvas = create_canvas(size, size, (0, 0, 0, 0))
     cx, cy = size / 2, size / 2 + 2
     fill_ellipse(canvas, cx, cy, size * 0.34, size * 0.30, (228, 55, 52, 255))
@@ -137,6 +144,7 @@ def build_icon_pixels(size: int):
 
 
 def write_ico(canvas, out_path: Path):
+    """Write a 32-bit ICO from RGBA canvas using DIB XOR+AND layout."""
     h = len(canvas)
     w = len(canvas[0])
     # ICO uses DIB with height doubled (XOR + AND mask)
@@ -186,6 +194,7 @@ def write_ico(canvas, out_path: Path):
 
 
 def main():
+    """Generate BMP animation frames and replace main.ico."""
     ensure_dir(OUT_BMP_DIR)
     frame_count = 12
     for i in range(frame_count):
