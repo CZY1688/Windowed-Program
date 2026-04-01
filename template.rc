@@ -29,9 +29,23 @@ LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 ID_form1 DIALOG DISCARDABLE  200, 100, 202, 119
 STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU | 
     WS_THICKFRAME
-CAPTION "�ҵĴ���"
-FONT 9, "����"
+CAPTION "�ҵĴ���"
+FONT 9, "����"
 BEGIN
+    LTEXT           "番茄钟（25/5）",ID_txtStatus,8,7,80,9
+    LTEXT           "模式：工作",ID_txtMode,8,20,70,9
+    LTEXT           "剩余：25:00",ID_txtRemain,78,20,60,9
+    LTEXT           "轮次：0",ID_txtRound,145,20,45,9
+    LTEXT           "工作(分钟):",IDC_STATIC,8,34,40,9
+    EDITTEXT        ID_editWorkMin,50,32,25,12,ES_AUTOHSCROLL
+    LTEXT           "休息(分钟):",IDC_STATIC,84,34,40,9
+    EDITTEXT        ID_editBreakMin,126,32,25,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "开始",ID_btnStartPause,156,31,36,14
+    CONTROL         "",ID_picTomato,"Static",SS_BITMAP | WS_BORDER,8,49,64,64
+    PUSHBUTTON      "重置",ID_btnReset,84,52,48,14
+    PUSHBUTTON      "跳过",ID_btnSkip,144,52,48,14
+    LTEXT           "提示：空格 开始/暂停，R 重置，N 跳过",IDC_STATIC,84,74,108,20
+    LTEXT           "可修改工作/休息时长后重置生效",IDC_STATIC,84,96,108,20
 END
 
 
