@@ -1,5 +1,6 @@
 #include "resource.h"
 #include "BForm.h"
+#include <strsafe.h>
 
 // ============================================================================
 // 创意窗口示例（基于现有模板）
@@ -135,7 +136,7 @@ static void Form_MouseDown(int button, int /*shift*/, int /*x*/, int /*y*/)
 // - Enter：切换主题；
 // - Esc：退出程序。
 // ----------------------------------------------------------------------------
-static void Form_KeyDown(int keyCode, int /*shift*/, int pbCancel)
+static void Form_KeyDown(int keyCode, int /*shift*/, int /*pbCancel*/)
 {
 	switch (keyCode)
 	{
@@ -150,8 +151,6 @@ static void Form_KeyDown(int keyCode, int /*shift*/, int pbCancel)
 	case VK_ESCAPE:
 		// 结束消息循环，退出程序
 		End(0);
-		// 通知框架取消默认后续处理
-		*((int *)pbCancel) = 1;
 		break;
 	default:
 		break;
@@ -192,16 +191,16 @@ static void Form_Paint()
 	y += 34;
 
 	// 动态状态区
-	wsprintf(line, TEXT("鼠标坐标：(%d, %d)"), g_mouseX, g_mouseY);
+	StringCchPrintf(line, 256, TEXT("鼠标坐标：(%d, %d)"), g_mouseX, g_mouseY);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	wsprintf(line, TEXT("点击次数：%d"), g_clickCount);
+	StringCchPrintf(line, 256, TEXT("点击次数：%d"), g_clickCount);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	wsprintf(line, TEXT("创意能量值：%d / 999"), energy);
+	StringCchPrintf(line, 256, TEXT("创意能量值：%d / 999"), energy);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	wsprintf(line, TEXT("当前主题：#%d"), g_themeIndex + 1);
+	StringCchPrintf(line, 256, TEXT("当前主题：#%d"), g_themeIndex + 1);
 	g_form.PrintText(line, 20, y); y += 24;
 
 	g_form.PrintText(g_autoPoem ? TEXT("自动诗句模式：ON") : TEXT("自动诗句模式：OFF"), 20, y);
@@ -251,4 +250,3 @@ int main()
 	g_form.Show();
 	return 0;
 }
-
