@@ -7,9 +7,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT_BMP_DIR = ROOT / "assets" / "pomodoro_frames"
 OUT_ICO_PATH = ROOT / "main.ico"
+EPSILON = 1e-6
 
 
 def ensure_dir(path: Path) -> None:
+    """Create directory and missing parent directories if they do not exist."""
     path.mkdir(parents=True, exist_ok=True)
 
 
@@ -45,8 +47,8 @@ def fill_ellipse(canvas, cx: float, cy: float, rx: float, ry: float, color):
     y1 = min(len(canvas) - 1, int(cy + ry + 1))
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
-            dx = (x - cx) / max(rx, 1e-6)
-            dy = (y - cy) / max(ry, 1e-6)
+            dx = (x - cx) / max(rx, EPSILON)
+            dy = (y - cy) / max(ry, EPSILON)
             if dx * dx + dy * dy <= 1.0:
                 set_px(canvas, x, y, color)
 

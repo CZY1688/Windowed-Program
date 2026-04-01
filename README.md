@@ -10,7 +10,7 @@
 运行方式（需要 Python 3）：
 
 ```bash
-python /home/runner/work/Windowed-Program/Windowed-Program/scripts/generate_assets.py
+python scripts/generate_assets.py
 ```
 
 说明：
