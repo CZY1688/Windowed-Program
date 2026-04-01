@@ -33,6 +33,16 @@ static int g_themeIndex = 0;
 // 是否启用“自动诗句模式”
 static bool g_autoPoem = true;
 
+// 诗句资源：放在文件级，便于维护，也避免在高频 Paint 逻辑中声明。
+static LPCTSTR g_poems[5] =
+{
+	TEXT("灵感诗句：把问题拆小，答案会主动靠近。"),
+	TEXT("灵感诗句：先做可运行版本，再做优雅版本。"),
+	TEXT("灵感诗句：复杂系统的起点，常是一个清晰按钮。"),
+	TEXT("灵感诗句：当你能解释它，你就快实现它了。"),
+	TEXT("灵感诗句：每次重绘，都是一次重新组织思路。")
+};
+
 // ----------------------------------------------------------------------------
 // 按主题应用颜色。
 // 说明：
@@ -136,7 +146,7 @@ static void Form_MouseDown(int button, int /*shift*/, int /*x*/, int /*y*/)
 // - Enter：切换主题；
 // - Esc：退出程序。
 // ----------------------------------------------------------------------------
-static void Form_KeyDown(int keyCode, int /*shift*/, int /*pbCancel*/)
+static void Form_KeyDown(int keyCode, int /*shift*/, int /*cancelFlag*/)
 {
 	switch (keyCode)
 	{
@@ -172,15 +182,6 @@ static void Form_Paint()
 	const int energy = (g_mouseX * 3 + g_mouseY * 5 + g_clickCount * 11) % 1000;
 	const int poemIndex = (energy / 200) % 5;
 
-	static LPCTSTR poems[5] =
-	{
-		TEXT("灵感诗句：把问题拆小，答案会主动靠近。"),
-		TEXT("灵感诗句：先做可运行版本，再做优雅版本。"),
-		TEXT("灵感诗句：复杂系统的起点，常是一个清晰按钮。"),
-		TEXT("灵感诗句：当你能解释它，你就快实现它了。"),
-		TEXT("灵感诗句：每次重绘，都是一次重新组织思路。")
-	};
-
 	TCHAR line[256] = {0};
 	int y = 18;
 
@@ -208,7 +209,7 @@ static void Form_Paint()
 
 	// 创意文本区
 	g_form.FontItalicSet(true);
-	g_form.PrintText(poems[poemIndex], 20, y);
+	g_form.PrintText(g_poems[poemIndex], 20, y);
 	g_form.FontItalicSet(false);
 	y += 36;
 
