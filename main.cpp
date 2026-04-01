@@ -6,6 +6,8 @@
 static CBForm g_form(ID_form1);
 static const UINT kTimerPomodoro = 1001;
 static const int kTickMs = 200;
+static const int kFrameCount = 12;
+static const TCHAR* kFramePattern = TEXT("%s\\assets\\pomodoro_frames\\tomato_%02d.bmp");
 
 static bool g_running = false;
 static bool g_isWorkMode = true;
@@ -13,6 +15,7 @@ static int g_roundCount = 0;
 static int g_workMinutes = 25;
 static int g_breakMinutes = 5;
 static int g_remainSeconds = 25 * 60;
+static int g_accMs = 0;
 
 static std::vector<tstring> g_frames;
 static int g_frameIndex = 0;
@@ -30,7 +33,7 @@ static tstring BuildFramePath(int idx)
 		}
 	}
 	TCHAR path[MAX_PATH] = { 0 };
-	StringCchPrintf(path, MAX_PATH, TEXT("%s\\assets\\pomodoro_frames\\tomato_%02d.bmp"), exeDir, idx);
+	StringCchPrintf(path, MAX_PATH, kFramePattern, exeDir, idx);
 	return tstring(path);
 }
 
@@ -87,6 +90,7 @@ static void StopTimer()
 {
 	KillTimer(g_form.hWnd(), kTimerPomodoro);
 	g_running = false;
+	g_accMs = 0;
 	UpdateLabels();
 }
 
@@ -132,7 +136,7 @@ static void OnFormLoad()
 	g_form.Control(ID_editBreakMin, false).TextSet(g_breakMinutes);
 
 	g_frames.clear();
-	for (int i = 0; i < 12; ++i) g_frames.push_back(BuildFramePath(i));
+	for (int i = 0; i < kFrameCount; ++i) g_frames.push_back(BuildFramePath(i));
 
 	EnterMode(true);
 	g_form.Control(ID_txtStatus, false).TextSet(TEXT("准备开始专注"));
@@ -164,12 +168,11 @@ static void OnKeyDown(int keyCode, int, int)
 static void OnTimer(int, int, int)
 {
 	if (!g_running) return;
-	static int accMs = 0;
-	accMs += kTickMs;
+	g_accMs += kTickMs;
 	UpdateTomatoFrame();
 
-	if (accMs < 1000) return;
-	accMs = 0;
+	if (g_accMs < 1000) return;
+	g_accMs = 0;
 
 	if (g_remainSeconds > 0) --g_remainSeconds;
 
