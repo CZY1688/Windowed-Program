@@ -159,7 +159,8 @@ static void Form_KeyDown(int keyCode, int /*shift*/, int /*cancelFlag*/)
 		g_form.Refresh();
 		break;
 	case VK_ESCAPE:
-		// 结束消息循环，退出程序
+		// 结束消息循环，退出程序。
+		// End() 是模板在 BForm.h 中声明的全局函数（封装了退出消息逻辑）。
 		End(0);
 		break;
 	default:
@@ -179,10 +180,14 @@ static void Form_Paint()
 	g_form.Cls();
 
 	// 能量值：纯演示算法，强调“输入行为 -> 可见反馈”
-	const int energy = (g_mouseX * 3 + g_mouseY * 5 + g_clickCount * 11) % 1000;
+	const long long energyRaw =
+		(static_cast<long long>(g_mouseX) * 3LL) +
+		(static_cast<long long>(g_mouseY) * 5LL) +
+		(static_cast<long long>(g_clickCount) * 11LL);
+	const int energy = static_cast<int>(energyRaw % 1000LL);
 	const int poemIndex = (energy / 200) % 5;
 
-	TCHAR line[256] = {0};
+	TCHAR line[512] = {0};
 	int y = 18;
 
 	// 标题
@@ -192,16 +197,16 @@ static void Form_Paint()
 	y += 34;
 
 	// 动态状态区
-	StringCchPrintf(line, 256, TEXT("鼠标坐标：(%d, %d)"), g_mouseX, g_mouseY);
+	StringCchPrintf(line, _countof(line), TEXT("鼠标坐标：(%d, %d)"), g_mouseX, g_mouseY);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	StringCchPrintf(line, 256, TEXT("点击次数：%d"), g_clickCount);
+	StringCchPrintf(line, _countof(line), TEXT("点击次数：%d"), g_clickCount);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	StringCchPrintf(line, 256, TEXT("创意能量值：%d / 999"), energy);
+	StringCchPrintf(line, _countof(line), TEXT("创意能量值：%d / 999"), energy);
 	g_form.PrintText(line, 20, y); y += 24;
 
-	StringCchPrintf(line, 256, TEXT("当前主题：#%d"), g_themeIndex + 1);
+	StringCchPrintf(line, _countof(line), TEXT("当前主题：#%d"), g_themeIndex + 1);
 	g_form.PrintText(line, 20, y); y += 24;
 
 	g_form.PrintText(g_autoPoem ? TEXT("自动诗句模式：ON") : TEXT("自动诗句模式：OFF"), 20, y);
