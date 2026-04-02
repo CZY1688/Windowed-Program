@@ -16,6 +16,9 @@
 #define ID_txtMode                      1009
 #define ID_txtRemain                    1010
 #define ID_txtRound                     1011
+#ifndef IDC_STATIC
+#define IDC_STATIC                      -1
+#endif
 
 // Next default values for new objects
 // 

@@ -50,16 +50,16 @@ static void UpdateLabels()
 	TCHAR sRemain[64] = { 0 };
 	int mm = g_remainSeconds / 60;
 	int ss = g_remainSeconds % 60;
-	StringCchPrintf(sRemain, 64, TEXT("剩余：%02d:%02d"), mm, ss);
+	StringCchPrintf(sRemain, 64, TEXT("Remain: %02d:%02d"), mm, ss);
 	g_form.Control(ID_txtRemain, false).TextSet(sRemain);
 
-	g_form.Control(ID_txtMode, false).TextSet(g_isWorkMode ? TEXT("模式：工作") : TEXT("模式：休息"));
+	g_form.Control(ID_txtMode, false).TextSet(g_isWorkMode ? TEXT("Mode: Work") : TEXT("Mode: Break"));
 
 	TCHAR sRound[64] = { 0 };
-	StringCchPrintf(sRound, 64, TEXT("轮次：%d"), g_roundCount);
+	StringCchPrintf(sRound, 64, TEXT("Round: %d"), g_roundCount);
 	g_form.Control(ID_txtRound, false).TextSet(sRound);
 
-	g_form.Control(ID_btnStartPause, false).TextSet(g_running ? TEXT("暂停") : TEXT("开始"));
+	g_form.Control(ID_btnStartPause, false).TextSet(g_running ? TEXT("Pause") : TEXT("Start"));
 }
 
 static void UpdateTomatoFrame(bool force = false)
@@ -114,7 +114,7 @@ static void ResetPomodoro()
 	ApplyMinutesFromInputs();
 	g_roundCount = 0;
 	EnterMode(true);
-	g_form.Control(ID_txtStatus, false).TextSet(TEXT("番茄钟已重置"));
+	g_form.Control(ID_txtStatus, false).TextSet(TEXT("Pomodoro reset"));
 }
 
 static void SkipCurrentMode()
@@ -122,13 +122,13 @@ static void SkipCurrentMode()
 	bool wasWork = g_isWorkMode;
 	if (wasWork) ++g_roundCount;
 	EnterMode(!g_isWorkMode);
-	g_form.Control(ID_txtStatus, false).TextSet(wasWork ? TEXT("已跳到休息阶段") : TEXT("已跳到工作阶段"));
+	g_form.Control(ID_txtStatus, false).TextSet(wasWork ? TEXT("Switched to break") : TEXT("Switched to work"));
 }
 
 static void OnFormLoad()
 {
 	g_form.IconSet(IDI_ICON1);
-	g_form.TextSet(TEXT("番茄钟"));
+	g_form.TextSet(TEXT("Pomodoro Timer"));
 	g_form.MoveToScreenCenter(520, 360);
 	g_form.KeyPreview = true;
 
@@ -139,13 +139,13 @@ static void OnFormLoad()
 	for (int i = 0; i < kFrameCount; ++i) g_frames.push_back(BuildFramePath(i));
 
 	EnterMode(true);
-	g_form.Control(ID_txtStatus, false).TextSet(TEXT("准备开始专注"));
+	g_form.Control(ID_txtStatus, false).TextSet(TEXT("Ready to focus"));
 }
 
 static void OnStartPauseClick()
 {
 	ToggleStartPause();
-	g_form.Control(ID_txtStatus, false).TextSet(g_running ? TEXT("计时进行中") : TEXT("已暂停"));
+	g_form.Control(ID_txtStatus, false).TextSet(g_running ? TEXT("Running") : TEXT("Paused"));
 }
 
 static void OnResetClick()
@@ -182,11 +182,11 @@ static void OnTimer(int, int, int)
 		if (finishedWork)
 		{
 			++g_roundCount;
-			g_form.Control(ID_txtStatus, false).TextSet(TEXT("工作结束，开始休息"));
+			g_form.Control(ID_txtStatus, false).TextSet(TEXT("Work finished, break started"));
 		}
 		else
 		{
-			g_form.Control(ID_txtStatus, false).TextSet(TEXT("休息结束，开始工作"));
+			g_form.Control(ID_txtStatus, false).TextSet(TEXT("Break finished, work started"));
 		}
 		EnterMode(!g_isWorkMode);
 	}
