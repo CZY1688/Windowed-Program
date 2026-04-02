@@ -44,8 +44,8 @@ BEGIN
     CONTROL         "",ID_picTomato,"Static",SS_BITMAP | WS_BORDER,8,49,64,64
     PUSHBUTTON      "Reset",ID_btnReset,84,52,48,14
     PUSHBUTTON      "Skip",ID_btnSkip,144,52,48,14
-    LTEXT           "Hotkeys: Space Start/Pause, R Reset, N Skip",IDC_STATIC,84,74,108,20
-    LTEXT           "Edit work/break minutes, then reset to apply",IDC_STATIC,84,96,108,20
+    LTEXT           "Space: Start/Pause  R: Reset  N: Skip",IDC_STATIC,84,74,108,20
+    LTEXT           "Change mins, then press Reset",IDC_STATIC,84,96,108,20
 END
 
 
