@@ -4,6 +4,9 @@
 //
 #define ID_form1                        101
 #define IDI_ICON1                       103
+#ifndef IDC_STATIC
+#define IDC_STATIC                      -1
+#endif
 #define ID_txt1                         1000
 #define ID_cmd1                         1001
 #define ID_txtStatus                    1002
