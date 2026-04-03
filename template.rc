@@ -32,7 +32,7 @@ STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU |
 CAPTION "Red Packet Simulator"
 FONT 9, "MS Shell Dlg"
 BEGIN
-    CONTROL         "",ID_picCover,"Static",SS_BITMAP | WS_BORDER,8,8,132,90
+    CONTROL         "",ID_picCover,"Static",SS_BITMAP | SS_NOTIFY | WS_BORDER,8,8,132,90
     EDITTEXT        ID_editLog,8,104,132,116,ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY
     LTEXT           "Static",ID_txtLeftStatic,8,224,60,9
     GROUPBOX        "Packet A (pre-funded)",ID_grpA,148,8,204,52

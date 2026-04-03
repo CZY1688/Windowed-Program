@@ -151,18 +151,20 @@ static void OnFormLoad()
 	else
 		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 
+	LPCTSTR textGrab = TCN_Grab();
+	LPCTSTR textView = TCN_View();
 	g_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
 	g_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
 	g_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
-	g_form.Control(ID_btnAGrab, false).TextSet(TCN_Grab());
-	g_form.Control(ID_btnAShow, false).TextSet(TCN_View());
-	g_form.Control(ID_btnBGrab, false).TextSet(TCN_Grab());
-	g_form.Control(ID_btnBShow, false).TextSet(TCN_View());
+	g_form.Control(ID_btnAGrab, false).TextSet(textGrab);
+	g_form.Control(ID_btnAShow, false).TextSet(textView);
+	g_form.Control(ID_btnBGrab, false).TextSet(textGrab);
+	g_form.Control(ID_btnBShow, false).TextSet(textView);
 	g_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
 	g_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
 	g_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
-	g_form.Control(ID_btnCGrab, false).TextSet(TCN_Grab());
-	g_form.Control(ID_btnCShow, false).TextSet(TCN_View());
+	g_form.Control(ID_btnCGrab, false).TextSet(textGrab);
+	g_form.Control(ID_btnCShow, false).TextSet(textView);
 	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
@@ -234,6 +236,7 @@ static void OnCShow()
 int main()
 {
 	g_form.EventAdd(0, eForm_Load, OnFormLoad);
+	// Packet A controls are hidden at runtime, so cover click acts as the grab trigger.
 	g_form.EventAdd(ID_picCover, eStatic_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
