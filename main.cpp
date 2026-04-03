@@ -61,6 +61,16 @@ static LPCTSTR TCN_CFill()
 	return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305");
 }
 
+static LPCTSTR TCN_ResultDefault()
+{
+	return TEXT("");
+}
+
+static LPCTSTR TCN_GrabFailHint()
+{
+	return TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002");
+}
+
 // Build an exe-relative path so local bmp works even when cwd is different.
 static bool TryBuildExeRelativeCoverPath(tstring& outPath)
 {
@@ -146,6 +156,22 @@ static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, dou
 	AppendLog(line);
 }
 
+static void UpdateResultText(const std::string& grabber, double money)
+{
+	TCHAR line[256] = { 0 };
+	_stprintf_s(line, _countof(line), TEXT("\x606D\x559C\xFF01%s \x62A2\x5230 %.2f \x5143\x7EA2\x5305\xFF01"),
+		ToTString(grabber).c_str(), money);
+	g_form.Control(ID_txtResult, false).TextSet(line);
+}
+
+static void UpdateLeftFooter(const RedPacket& packet)
+{
+	TCHAR line[256] = { 0 };
+	_stprintf_s(line, _countof(line), TEXT("\x7EA2\x5305\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x7EA2\x5305"),
+		packet.grabbedCount(), packet.totalCount());
+	g_form.Control(ID_txtLeftStatic, false).TextSet(line);
+}
+
 // Print packet detail block into the common log area.
 static void AppendSummary(const RedPacket& packet, LPCTSTR title)
 {
@@ -155,7 +181,7 @@ static void AppendSummary(const RedPacket& packet, LPCTSTR title)
 	AppendLog(s.c_str());
 }
 
-static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetName, bool checkReady = false)
+static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetName, bool checkReady = false, bool showResultText = false)
 {
 	// Packet C requires a successful funding step before grab is allowed.
 	if (checkReady && !g_packetCReady)
@@ -171,9 +197,11 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 		TCHAR line[128] = { 0 };
 		_stprintf_s(line, _countof(line), TEXT("%s is empty"), packetName);
 		AppendLog(line);
+		if (showResultText) g_form.Control(ID_txtResult, false).TextSet(TCN_GrabFailHint());
 		return;
 	}
 	AppendGrabResult(packetName, who, got);
+	if (showResultText) UpdateResultText(who, got);
 }
 
 static void OnFormLoad()
@@ -213,7 +241,9 @@ static void OnFormLoad()
 	g_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
 	g_form.Control(ID_btnCGrab, false).TextSet(textGrab);
 	g_form.Control(ID_btnCShow, false).TextSet(textView);
+	g_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
 	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
+	g_form.Control(ID_txtSep, false).VisibleSet(false);
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
 	// Packet A UI controls are hidden in runtime; cover click is the trigger.
@@ -233,11 +263,13 @@ static void OnFormLoad()
 		AppendLog(TEXT("Local BMP not found, using embedded cover image."));
 	}
 	AppendLog(TEXT("Red packet simulator started."));
+	UpdateLeftFooter(g_packetA);
 }
 
 static void OnAGrab()
 {
 	DoGrab(g_packetA, ID_editAName, TEXT("Packet A"));
+	UpdateLeftFooter(g_packetA);
 }
 
 static void OnAShow()
@@ -247,7 +279,7 @@ static void OnAShow()
 
 static void OnBGrab()
 {
-	DoGrab(g_packetB, ID_editBName, TEXT("Packet B"));
+	DoGrab(g_packetB, ID_editBName, TEXT("Packet B"), false, true);
 }
 
 static void OnBShow()
