@@ -126,7 +126,7 @@ static std::string ReadNameOrDefault(unsigned short idEdit)
 static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, double money)
 {
 	TCHAR line[256] = { 0 };
-	_stprintf(line, TEXT("%s - %s grabbed %.2f"),
+	_stprintf_s(line, _countof(line), TEXT("%s - %s grabbed %.2f"),
 		packetName, ToTString(grabber).c_str(), money);
 	AppendLog(line);
 }
@@ -154,7 +154,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 	if (got <= 0.0)
 	{
 		TCHAR line[128] = { 0 };
-		_stprintf(line, TEXT("%s is empty"), packetName);
+		_stprintf_s(line, _countof(line), TEXT("%s is empty"), packetName);
 		AppendLog(line);
 		return;
 	}
