@@ -10,6 +10,52 @@ static RedPacket g_packetA(30.0, 5, "Owner A");
 static RedPacket g_packetB(50.0, 8, "Owner B");
 static RedPacket g_packetC(0.0, 1, "Owner C");
 static bool g_packetCReady = false;
+static LPCTSTR kCoverBmpPath = TEXT("assets\\redpacket_cover.bmp");
+
+static LPCTSTR TCN_WindowTitle()
+{
+	return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305");
+}
+
+static LPCTSTR TCN_GroupA()
+{
+	return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09");
+}
+
+static LPCTSTR TCN_GroupB()
+{
+	return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09");
+}
+
+static LPCTSTR TCN_GroupC()
+{
+	return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09");
+}
+
+static LPCTSTR TCN_Grab()
+{
+	return TEXT("\x62A2\x7EA2\x5305");
+}
+
+static LPCTSTR TCN_View()
+{
+	return TEXT("\x67E5\x770B");
+}
+
+static LPCTSTR TCN_CMoney()
+{
+	return TEXT("\x94B1\x6570(\x5143)\xFF1A");
+}
+
+static LPCTSTR TCN_CNum()
+{
+	return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A");
+}
+
+static LPCTSTR TCN_CFill()
+{
+	return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305");
+}
 
 static tstring ToTString(const std::string& s)
 {
@@ -94,12 +140,29 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 static void OnFormLoad()
 {
 	g_form.IconSet(IDI_ICON1);
-	g_form.TextSet(TEXT("Red Packet Simulator"));
+	g_form.TextSet(TCN_WindowTitle());
 	g_form.MoveToScreenCenter(920, 650);
 	g_form.BackColorSet(RGB(236, 236, 236));
 	g_form.KeyPreview = true;
 
-	g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
+	DWORD attr = GetFileAttributes(kCoverBmpPath);
+	if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY) == 0)
+		g_form.Control(ID_picCover, false).PictureSet(kCoverBmpPath);
+	else
+		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
+
+	g_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
+	g_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
+	g_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
+	g_form.Control(ID_btnAGrab, false).TextSet(TCN_Grab());
+	g_form.Control(ID_btnAShow, false).TextSet(TCN_View());
+	g_form.Control(ID_btnBGrab, false).TextSet(TCN_Grab());
+	g_form.Control(ID_btnBShow, false).TextSet(TCN_View());
+	g_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
+	g_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
+	g_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
+	g_form.Control(ID_btnCGrab, false).TextSet(TCN_Grab());
+	g_form.Control(ID_btnCShow, false).TextSet(TCN_View());
 	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
@@ -171,6 +234,7 @@ static void OnCShow()
 int main()
 {
 	g_form.EventAdd(0, eForm_Load, OnFormLoad);
+	g_form.EventAdd(ID_picCover, eStatic_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
 	g_form.EventAdd(ID_btnBGrab, eCommandButton_Click, OnBGrab);
