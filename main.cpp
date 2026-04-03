@@ -12,7 +12,10 @@ static RedPacket g_packetB(50.0, 8, "Owner B");
 static RedPacket g_packetC(0.0, 1, "Owner C");
 static bool g_packetCReady = false;
 static LPCTSTR kCoverBmpPath = TEXT("assets\\redpacket_cover.bmp");
+static LPCTSTR kCoverBmpRelativeToExe = TEXT("\\assets\\redpacket_cover.bmp");
 
+// Runtime Chinese text is provided via Unicode escapes to keep source/resource ASCII-safe
+// for legacy VC2010/CP936 toolchains while still showing Chinese UI at runtime.
 static LPCTSTR TCN_WindowTitle()
 {
 	return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305");
@@ -63,7 +66,7 @@ static bool TryBuildExeRelativeCoverPath(tstring& outPath)
 {
 	TCHAR modulePath[MAX_PATH] = { 0 };
 	DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
-	if (n == 0 || n >= MAX_PATH) return false;
+	if (n == 0 || n == MAX_PATH) return false;
 
 	TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
 	TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
@@ -73,7 +76,19 @@ static bool TryBuildExeRelativeCoverPath(tstring& outPath)
 
 	*pSlash = 0;
 	outPath = modulePath;
-	outPath += TEXT("\\assets\\redpacket_cover.bmp");
+	outPath += kCoverBmpRelativeToExe;
+	return true;
+}
+
+// Try loading cover bmp from a file path; returns true on success.
+static bool TryLoadCoverFromPath(LPCTSTR bmpPath)
+{
+	DWORD attr = GetFileAttributes(bmpPath);
+	if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
+	{
+		return false;
+	}
+	g_form.Control(ID_picCover, false).PictureSet(bmpPath);
 	return true;
 }
 
@@ -174,21 +189,11 @@ static void OnFormLoad()
 	tstring coverPath;
 	if (TryBuildExeRelativeCoverPath(coverPath))
 	{
-		DWORD attrExeRel = GetFileAttributes(coverPath.c_str());
-		if (attrExeRel != INVALID_FILE_ATTRIBUTES && (attrExeRel & FILE_ATTRIBUTE_DIRECTORY) == 0)
-		{
-			g_form.Control(ID_picCover, false).PictureSet(coverPath.c_str());
-			loadedCoverFromLocalBmp = true;
-		}
+		loadedCoverFromLocalBmp = TryLoadCoverFromPath(coverPath.c_str());
 	}
 	if (!loadedCoverFromLocalBmp)
 	{
-		DWORD attrRel = GetFileAttributes(kCoverBmpPath);
-		if (attrRel != INVALID_FILE_ATTRIBUTES && (attrRel & FILE_ATTRIBUTE_DIRECTORY) == 0)
-		{
-			g_form.Control(ID_picCover, false).PictureSet(kCoverBmpPath);
-			loadedCoverFromLocalBmp = true;
-		}
+		loadedCoverFromLocalBmp = TryLoadCoverFromPath(kCoverBmpPath);
 	}
 	if (!loadedCoverFromLocalBmp)
 		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
