@@ -58,6 +58,7 @@ static LPCTSTR TCN_CFill()
 	return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305");
 }
 
+// Build an exe-relative path so local bmp works even when cwd is different.
 static bool TryBuildExeRelativeCoverPath(tstring& outPath)
 {
 	TCHAR modulePath[MAX_PATH] = { 0 };
@@ -107,12 +108,14 @@ static tstring ReadText(unsigned short idEdit)
 	return g_form.Control(idEdit, false).Text();
 }
 
+// Unified log output: append one line and newline into the left log box.
 static void AppendLog(LPCTSTR s)
 {
 	g_form.Control(ID_editLog, false).TextAdd(s);
 	g_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n"));
 }
 
+// Empty name falls back to Anonymous to keep record format stable.
 static std::string ReadNameOrDefault(unsigned short idEdit)
 {
 	tstring s = ReadText(idEdit);
@@ -123,11 +126,12 @@ static std::string ReadNameOrDefault(unsigned short idEdit)
 static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, double money)
 {
 	TCHAR line[256] = { 0 };
-	StringCchPrintf(line, 256, TEXT("%s - %s grabbed %.2f"),
+	_stprintf(line, TEXT("%s - %s grabbed %.2f"),
 		packetName, ToTString(grabber).c_str(), money);
 	AppendLog(line);
 }
 
+// Print packet detail block into the common log area.
 static void AppendSummary(const RedPacket& packet, LPCTSTR title)
 {
 	AppendLog(TEXT("--------------------------------------------------"));
@@ -138,6 +142,7 @@ static void AppendSummary(const RedPacket& packet, LPCTSTR title)
 
 static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetName, bool checkReady = false)
 {
+	// Packet C requires a successful funding step before grab is allowed.
 	if (checkReady && !g_packetCReady)
 	{
 		AppendLog(TEXT("Packet C is not funded yet, cannot grab."));
@@ -149,7 +154,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 	if (got <= 0.0)
 	{
 		TCHAR line[128] = { 0 };
-		StringCchPrintf(line, 128, TEXT("%s is empty"), packetName);
+		_stprintf(line, TEXT("%s is empty"), packetName);
 		AppendLog(line);
 		return;
 	}
@@ -158,6 +163,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 
 static void OnFormLoad()
 {
+	// Keep window icon setup: required by assignment and runtime UX.
 	g_form.IconSet(IDI_ICON1);
 	g_form.TextSet(TCN_WindowTitle());
 	g_form.MoveToScreenCenter(920, 650);
@@ -187,6 +193,7 @@ static void OnFormLoad()
 	if (!loadedCoverFromLocalBmp)
 		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 
+	// Runtime captions are applied here (resource text stays ASCII-safe).
 	LPCTSTR textGrab = TCN_Grab();
 	LPCTSTR textView = TCN_View();
 	g_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
@@ -204,6 +211,7 @@ static void OnFormLoad()
 	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
+	// Packet A UI controls are hidden in runtime; cover click is the trigger.
 	g_form.Control(ID_btnAGrab, false).VisibleSet(false);
 	g_form.Control(ID_btnAShow, false).VisibleSet(false);
 	g_form.Control(ID_editAName, false).VisibleSet(false);
@@ -244,6 +252,7 @@ static void OnBShow()
 
 static void OnCFill()
 {
+	// Read custom amount + count from C group input boxes.
 	double money = g_form.Control(ID_editCMoney, false).TextVal();
 	int count = static_cast<int>(g_form.Control(ID_editCNum, false).TextVal());
 	if (money <= 0.0 || count <= 0)
@@ -259,6 +268,7 @@ static void OnCFill()
 
 	g_packetC.setMoney(money, count);
 	g_packetCReady = true;
+	// After funding succeeds, enable C-Grab button.
 	g_form.Control(ID_btnCGrab, false).EnabledSet(true);
 	AppendLog(TEXT("Packet C funded successfully. You can now start grabbing."));
 }
