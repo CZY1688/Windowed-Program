@@ -29,30 +29,30 @@ LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 ID_form1 DIALOG DISCARDABLE  200, 100, 360, 240
 STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU | 
     WS_THICKFRAME
-CAPTION "模拟微信抢红包"
+CAPTION "Red Packet Simulator"
 FONT 9, "MS Shell Dlg"
 BEGIN
-    CONTROL         "",ID_picCover,"Static",SS_BITMAP | WS_BORDER,8,8,132,90
+    CONTROL         "",ID_picCover,"Static",SS_BITMAP | SS_NOTIFY | WS_BORDER,8,8,132,90 // SS_NOTIFY lets cover click trigger Packet A grab.
     EDITTEXT        ID_editLog,8,104,132,116,ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY
     LTEXT           "Static",ID_txtLeftStatic,8,224,60,9
-    GROUPBOX        "红包A（钱已塞好，直接开抢）",ID_grpA,148,8,204,52
+    GROUPBOX        "Packet A (pre-funded)",ID_grpA,148,8,204,52
     EDITTEXT        ID_editAName,156,23,78,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "抢红包",ID_btnAGrab,240,22,52,16
-    PUSHBUTTON      "查看",ID_btnAShow,297,22,48,16
+    PUSHBUTTON      "Grab",ID_btnAGrab,240,22,52,16
+    PUSHBUTTON      "View",ID_btnAShow,297,22,48,16
     LTEXT           "Static",ID_txtSep,150,64,26,9
-    GROUPBOX        "红包B（钱已塞好，直接开抢）",ID_grpB,148,76,204,52
+    GROUPBOX        "Packet B (pre-funded)",ID_grpB,148,76,204,52
     EDITTEXT        ID_editBName,156,91,78,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "抢红包",ID_btnBGrab,240,90,52,16
-    PUSHBUTTON      "查看",ID_btnBShow,297,90,48,16
-    GROUPBOX        "红包C（先塞钱，才能抢）",ID_grpC,148,136,204,84
-    LTEXT           "钱数(元)：",ID_txtCMoney,156,152,38,9
+    PUSHBUTTON      "Grab",ID_btnBGrab,240,90,52,16
+    PUSHBUTTON      "View",ID_btnBShow,297,90,48,16
+    GROUPBOX        "Packet C (fund first)",ID_grpC,148,136,204,84
+    LTEXT           "Amount:",ID_txtCMoney,156,152,38,9
     EDITTEXT        ID_editCMoney,196,150,36,14,ES_AUTOHSCROLL
-    LTEXT           "分几个红包：",ID_txtCNum,156,170,42,9
+    LTEXT           "Count:",ID_txtCNum,156,170,42,9
     EDITTEXT        ID_editCNum,202,168,30,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "塞钱进红包",ID_btnCFill,240,150,105,32
+    PUSHBUTTON      "Fund Packet",ID_btnCFill,240,150,105,32
     EDITTEXT        ID_editCName,156,190,78,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "抢红包",ID_btnCGrab,240,189,52,16
-    PUSHBUTTON      "查看",ID_btnCShow,297,189,48,16
+    PUSHBUTTON      "Grab",ID_btnCGrab,240,189,52,16
+    PUSHBUTTON      "View",ID_btnCShow,297,189,48,16
 END
 
 
