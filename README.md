@@ -1,38 +1,26 @@
 # Windowed-Program
 
-## 生成番茄钟素材（ICO/BMP）
+## 模拟微信抢红包（当前工程）
 
-仓库提供了一个素材生成程序，可自动生成：
+当前 `main.cpp` 已实现“模拟微信抢红包”窗口程序：
 
-- `main.ico`（应用图标，直接被 `template.rc` 引用）
-- `assets/pomodoro_frames/tomato_00.bmp ~ tomato_11.bmp`（番茄小动画帧）
+- 窗口标题：`模拟微信抢红包`
+- 左侧展示区：
+  - 红包封面图片（资源位图 `IDB_PACKET_COVER`）
+  - 多行日志输出框（记录抢包和查看结果）
+  - 静态文本 `Static`
+- 右侧功能区：
+  - 红包A分组：运行时隐藏编辑框和按钮，仅保留分组标题
+  - 红包B分组：可输入昵称后抢红包/查看
+  - 红包C分组：先输入金额与红包数塞钱，再启用“抢红包”
 
-运行方式（需要 Python 3）：
+程序中包含 `RedPacket` 类（`RedPacket.h/.cpp`）：
 
-```bash
-python scripts/generate_assets.py
-```
+- `setMoney(double, int)`：塞钱（已抢后拒绝修改）
+- `grab(std::string)`：二倍均值随机算法抢红包，精确到分
+- `show()` / `summary()`：查看明细（发红包者、总份数、已抢份数、记录）
 
-说明：
+## 构建运行
 
-- 该脚本不依赖第三方库，使用标准库直接输出 `bmp/ico` 文件。
-- 你可以先用自动生成的素材联调功能，再替换成自己下载的素材。
-
-## 番茄钟完整程序（当前工程）
-
-当前 `main.cpp` 已实现完整番茄钟流程：
-
-- 工作/休息双阶段自动切换
-- 开始/暂停/重置/跳过
-- 轮次统计
-- 键盘快捷键：`Space` 开始/暂停，`R` 重置，`N` 跳过
-- 使用 `assets/pomodoro_frames/*.bmp` 做番茄动画帧显示
-
-使用步骤：
-
-1. 先执行素材生成：
-   ```bash
-   python scripts/generate_assets.py
-   ```
-2. 用 Visual Studio 打开并构建 `VC2010简单Windows程序模板.sln`
-3. 运行程序即可看到完整番茄钟界面与动画
+1. 用 Visual Studio 打开并构建 `VC2010简单Windows程序模板.sln`
+2. 运行程序即可体验红包模拟流程

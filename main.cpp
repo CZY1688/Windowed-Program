@@ -1,209 +1,183 @@
 #include "resource.h"
 #include "BForm.h"
+#include "RedPacket.h"
 #include <strsafe.h>
 #include <vector>
 
 static CBForm g_form(ID_form1);
-static const UINT kTimerPomodoro = 1001;
-static const int kTickMs = 200;
-static const int kFrameCount = 12;
-static const TCHAR* kFramePattern = TEXT("%s\\assets\\pomodoro_frames\\tomato_%02d.bmp");
 
-static bool g_running = false;
-static bool g_isWorkMode = true;
-static int g_roundCount = 0;
-static int g_workMinutes = 25;
-static int g_breakMinutes = 5;
-static int g_remainSeconds = 25 * 60;
-static int g_accMs = 0;
+static RedPacket g_packetA(30.0, 5, "红包A主人");
+static RedPacket g_packetB(50.0, 8, "红包B主人");
+static RedPacket g_packetC(0.0, 1, "红包C主人");
+static bool g_packetCReady = false;
 
-static std::vector<tstring> g_frames;
-static int g_frameIndex = 0;
-
-static tstring BuildFramePath(int idx)
+static tstring ToTString(const std::string& s)
 {
-	TCHAR exeDir[MAX_PATH] = { 0 };
-	GetModuleFileName(NULL, exeDir, MAX_PATH);
-	for (int i = lstrlen(exeDir) - 1; i >= 0; --i)
+#ifdef UNICODE
+	int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
+	if (len <= 0) return TEXT("");
+	std::vector<wchar_t> buf(len);
+	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
+	return tstring(&buf[0]);
+#else
+	return s;
+#endif
+}
+
+static std::string ToString(const tstring& s)
+{
+#ifdef UNICODE
+	int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
+	if (len <= 0) return std::string();
+	std::vector<char> buf(len);
+	WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
+	return std::string(&buf[0]);
+#else
+	return s;
+#endif
+}
+
+static tstring ReadText(unsigned short idEdit)
+{
+	return g_form.Control(idEdit, false).Text();
+}
+
+static void AppendLog(LPCTSTR s)
+{
+	g_form.Control(ID_editLog, false).TextAdd(s);
+	g_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n"));
+}
+
+static std::string ReadNameOrDefault(unsigned short idEdit)
+{
+	tstring s = ReadText(idEdit);
+	if (s.empty()) return "匿名";
+	return ToString(s);
+}
+
+static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, double money)
+{
+	TCHAR line[256] = { 0 };
+	StringCchPrintf(line, 256, TEXT("%s - %s 抢到 %.2f 元"),
+		packetName, ToTString(grabber).c_str(), money);
+	AppendLog(line);
+}
+
+static void AppendSummary(const RedPacket& packet, LPCTSTR title)
+{
+	AppendLog(TEXT("--------------------------------------------------"));
+	AppendLog(title);
+	tstring s = ToTString(packet.summary());
+	AppendLog(s.c_str());
+}
+
+static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetName, bool checkReady = false)
+{
+	if (checkReady && !g_packetCReady)
 	{
-		if (exeDir[i] == TEXT('\\') || exeDir[i] == TEXT('/'))
-		{
-			exeDir[i] = 0;
-			break;
-		}
+		AppendLog(TEXT("红包C尚未塞钱，无法开抢"));
+		return;
 	}
-	TCHAR path[MAX_PATH] = { 0 };
-	StringCchPrintf(path, MAX_PATH, kFramePattern, exeDir, idx);
-	return tstring(path);
-}
 
-static int ParseEditMinutes(unsigned short idEdit, int fallbackValue)
-{
-	int value = g_form.Control(idEdit, false).TextInt();
-	if (value <= 0) return fallbackValue;
-	if (value > 240) return 240;
-	return value;
-}
-
-static void UpdateLabels()
-{
-	TCHAR sRemain[64] = { 0 };
-	int mm = g_remainSeconds / 60;
-	int ss = g_remainSeconds % 60;
-	StringCchPrintf(sRemain, 64, TEXT("剩余：%02d:%02d"), mm, ss);
-	g_form.Control(ID_txtRemain, false).TextSet(sRemain);
-
-	g_form.Control(ID_txtMode, false).TextSet(g_isWorkMode ? TEXT("模式：工作") : TEXT("模式：休息"));
-
-	TCHAR sRound[64] = { 0 };
-	StringCchPrintf(sRound, 64, TEXT("轮次：%d"), g_roundCount);
-	g_form.Control(ID_txtRound, false).TextSet(sRound);
-
-	g_form.Control(ID_btnStartPause, false).TextSet(g_running ? TEXT("暂停") : TEXT("开始"));
-}
-
-static void UpdateTomatoFrame(bool force = false)
-{
-	if (g_frames.empty()) return;
-	if (!force) g_frameIndex = (g_frameIndex + 1) % (int)g_frames.size();
-	g_form.Control(ID_picTomato, false).PictureSet(g_frames[g_frameIndex].c_str());
-}
-
-static void EnterMode(bool workMode)
-{
-	g_isWorkMode = workMode;
-	g_remainSeconds = (workMode ? g_workMinutes : g_breakMinutes) * 60;
-	g_frameIndex = 0;
-	UpdateTomatoFrame(true);
-	UpdateLabels();
-}
-
-static void StartTimer()
-{
-	if (g_running) return;
-	SetTimer(g_form.hWnd(), kTimerPomodoro, kTickMs, NULL);
-	g_running = true;
-	UpdateLabels();
-}
-
-static void StopTimer()
-{
-	KillTimer(g_form.hWnd(), kTimerPomodoro);
-	g_running = false;
-	g_accMs = 0;
-	UpdateLabels();
-}
-
-static void ToggleStartPause()
-{
-	if (g_running) StopTimer();
-	else StartTimer();
-}
-
-static void ApplyMinutesFromInputs()
-{
-	g_workMinutes = ParseEditMinutes(ID_editWorkMin, g_workMinutes);
-	g_breakMinutes = ParseEditMinutes(ID_editBreakMin, g_breakMinutes);
-	g_form.Control(ID_editWorkMin, false).TextSet(g_workMinutes);
-	g_form.Control(ID_editBreakMin, false).TextSet(g_breakMinutes);
-}
-
-static void ResetPomodoro()
-{
-	StopTimer();
-	ApplyMinutesFromInputs();
-	g_roundCount = 0;
-	EnterMode(true);
-	g_form.Control(ID_txtStatus, false).TextSet(TEXT("番茄钟已重置"));
-}
-
-static void SkipCurrentMode()
-{
-	bool wasWork = g_isWorkMode;
-	if (wasWork) ++g_roundCount;
-	EnterMode(!g_isWorkMode);
-	g_form.Control(ID_txtStatus, false).TextSet(wasWork ? TEXT("已跳到休息阶段") : TEXT("已跳到工作阶段"));
+	std::string who = ReadNameOrDefault(idNameEdit);
+	double got = packet.grab(who);
+	if (got <= 0.0)
+	{
+		TCHAR line[128] = { 0 };
+		StringCchPrintf(line, 128, TEXT("%s 已抢完"), packetName);
+		AppendLog(line);
+		return;
+	}
+	AppendGrabResult(packetName, who, got);
 }
 
 static void OnFormLoad()
 {
 	g_form.IconSet(IDI_ICON1);
-	g_form.TextSet(TEXT("番茄钟"));
-	g_form.MoveToScreenCenter(520, 360);
+	g_form.TextSet(TEXT("模拟微信抢红包"));
+	g_form.MoveToScreenCenter(920, 650);
+	g_form.BackColorSet(RGB(236, 236, 236));
 	g_form.KeyPreview = true;
 
-	g_form.Control(ID_editWorkMin, false).TextSet(g_workMinutes);
-	g_form.Control(ID_editBreakMin, false).TextSet(g_breakMinutes);
+	g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
+	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
-	g_frames.clear();
-	for (int i = 0; i < kFrameCount; ++i) g_frames.push_back(BuildFramePath(i));
+	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
+	g_form.Control(ID_btnAGrab, false).VisibleSet(false);
+	g_form.Control(ID_btnAShow, false).VisibleSet(false);
+	g_form.Control(ID_editAName, false).VisibleSet(false);
 
-	EnterMode(true);
-	g_form.Control(ID_txtStatus, false).TextSet(TEXT("准备开始专注"));
+	g_form.Control(ID_editBName, false).TextSet(TEXT(""));
+
+	g_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
+	g_form.Control(ID_editCNum, false).TextSet(TEXT(""));
+	g_form.Control(ID_editCName, false).TextSet(TEXT(""));
+	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
+
+	AppendLog(TEXT("红包模拟程序已启动"));
 }
 
-static void OnStartPauseClick()
+static void OnAGrab()
 {
-	ToggleStartPause();
-	g_form.Control(ID_txtStatus, false).TextSet(g_running ? TEXT("计时进行中") : TEXT("已暂停"));
+	DoGrab(g_packetA, ID_editAName, TEXT("红包A"));
 }
 
-static void OnResetClick()
+static void OnAShow()
 {
-	ResetPomodoro();
+	AppendSummary(g_packetA, TEXT("红包A查看结果"));
 }
 
-static void OnSkipClick()
+static void OnBGrab()
 {
-	SkipCurrentMode();
+	DoGrab(g_packetB, ID_editBName, TEXT("红包B"));
 }
 
-static void OnKeyDown(int keyCode, int, int)
+static void OnBShow()
 {
-	if (keyCode == VK_SPACE) OnStartPauseClick();
-	else if (keyCode == 'R') OnResetClick();
-	else if (keyCode == 'N') OnSkipClick();
+	AppendSummary(g_packetB, TEXT("红包B查看结果"));
 }
 
-static void OnTimer(int, int, int)
+static void OnCFill()
 {
-	if (!g_running) return;
-	g_accMs += kTickMs;
-	UpdateTomatoFrame();
-
-	if (g_accMs < 1000) return;
-	g_accMs = 0;
-
-	if (g_remainSeconds > 0) --g_remainSeconds;
-
-	if (g_remainSeconds <= 0)
+	double money = g_form.Control(ID_editCMoney, false).TextVal();
+	int count = static_cast<int>(g_form.Control(ID_editCNum, false).TextVal());
+	if (money <= 0.0 || count <= 0)
 	{
-		bool finishedWork = g_isWorkMode;
-		if (finishedWork)
-		{
-			++g_roundCount;
-			g_form.Control(ID_txtStatus, false).TextSet(TEXT("工作结束，开始休息"));
-		}
-		else
-		{
-			g_form.Control(ID_txtStatus, false).TextSet(TEXT("休息结束，开始工作"));
-		}
-		EnterMode(!g_isWorkMode);
+		AppendLog(TEXT("红包C塞钱失败：钱数和红包个数必须为正数"));
+		return;
 	}
-	else
+	if (!g_packetC.canSetMoney())
 	{
-		UpdateLabels();
+		AppendLog(TEXT("红包C已被抢过，无法再次塞钱"));
+		return;
 	}
+
+	g_packetC.setMoney(money, count);
+	g_packetCReady = true;
+	g_form.Control(ID_btnCGrab, false).EnabledSet(true);
+	AppendLog(TEXT("红包C塞钱成功，可开始抢红包"));
+}
+
+static void OnCGrab()
+{
+	DoGrab(g_packetC, ID_editCName, TEXT("红包C"), true);
+}
+
+static void OnCShow()
+{
+	AppendSummary(g_packetC, TEXT("红包C查看结果"));
 }
 
 int main()
 {
 	g_form.EventAdd(0, eForm_Load, OnFormLoad);
-	g_form.EventAdd(ID_btnStartPause, eCommandButton_Click, OnStartPauseClick);
-	g_form.EventAdd(ID_btnReset, eCommandButton_Click, OnResetClick);
-	g_form.EventAdd(ID_btnSkip, eCommandButton_Click, OnSkipClick);
-	g_form.EventAdd(0, eKeyDown, OnKeyDown);
-	g_form.EventAdd(0, (ECBFormCtrlEventsIII)WM_TIMER, OnTimer);
+	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
+	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
+	g_form.EventAdd(ID_btnBGrab, eCommandButton_Click, OnBGrab);
+	g_form.EventAdd(ID_btnBShow, eCommandButton_Click, OnBShow);
+	g_form.EventAdd(ID_btnCFill, eCommandButton_Click, OnCFill);
+	g_form.EventAdd(ID_btnCGrab, eCommandButton_Click, OnCGrab);
+	g_form.EventAdd(ID_btnCShow, eCommandButton_Click, OnCShow);
 
 	g_form.Show();
 	return 0;
