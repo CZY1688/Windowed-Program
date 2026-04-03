@@ -102,7 +102,7 @@ static void OnFormLoad()
 	g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
-	g_form.Control(ID_editAName, false).TextSet(TEXT("示例编辑框"));
+	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
 	g_form.Control(ID_btnAGrab, false).VisibleSet(false);
 	g_form.Control(ID_btnAShow, false).VisibleSet(false);
 	g_form.Control(ID_editAName, false).VisibleSet(false);

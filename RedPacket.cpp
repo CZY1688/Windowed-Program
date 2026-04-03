@@ -1,8 +1,9 @@
 #include "RedPacket.h"
+#include <windows.h>
 
 #include <ctime>
+#include <cstdlib>
 #include <iomanip>
-#include <iostream>
 #include <random>
 #include <sstream>
 
@@ -18,31 +19,22 @@ RedPacket::RedPacket(double money, int packetNum, std::string owner)
 	if (name.empty()) name = "未知";
 	if (total_money < 0.0) total_money = 0.0;
 	arr = new std::string[num];
-	static bool seeded = false;
-	if (!seeded)
-	{
-		std::srand(static_cast<unsigned int>(std::time(0)));
-		seeded = true;
-	}
 }
 
 RedPacket::~RedPacket()
 {
 	delete[] arr;
 	arr = 0;
-	std::cout << "RedPacket destroyed: " << name << std::endl;
 }
 
 void RedPacket::setMoney(double money, int packetNum)
 {
 	if (grabbed > 0)
 	{
-		std::cout << "红包已被抢过，无法修改" << std::endl;
 		return;
 	}
 	if (packetNum <= 0 || money <= 0.0)
 	{
-		std::cout << "金额和红包个数必须为正数" << std::endl;
 		return;
 	}
 	total_money = Round2(money);
@@ -70,7 +62,9 @@ double RedPacket::grab(std::string grabberName)
 		double maxMoney = avg * 2.0;
 		if (maxMoney < 0.01) maxMoney = 0.01;
 
-		double unit = static_cast<double>((std::rand() % 10000) + 1) / 10000.0;
+		static thread_local std::mt19937 rng(std::random_device{}());
+		std::uniform_real_distribution<double> dist(0.0001, 1.0);
+		double unit = dist(rng);
 		got = Round2(unit * maxMoney);
 		if (got < 0.01) got = 0.01;
 
@@ -94,7 +88,8 @@ double RedPacket::grab(std::string grabberName)
 
 void RedPacket::show() const
 {
-	std::cout << summary();
+	std::string s = summary();
+	OutputDebugStringA(s.c_str());
 }
 
 std::string RedPacket::summary() const
