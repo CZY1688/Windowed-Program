@@ -7,7 +7,7 @@
 class RedPacket
 {
 public:
-	RedPacket(double money = 0.0, int packetNum = 1, std::string owner = "未知");
+	RedPacket(double money = 0.0, int packetNum = 1, std::string owner = "Unknown");
 	~RedPacket();
 
 	void setMoney(double money, int packetNum);

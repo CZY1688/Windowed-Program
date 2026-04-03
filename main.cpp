@@ -6,9 +6,9 @@
 
 static CBForm g_form(ID_form1);
 
-static RedPacket g_packetA(30.0, 5, "红包A主人");
-static RedPacket g_packetB(50.0, 8, "红包B主人");
-static RedPacket g_packetC(0.0, 1, "红包C主人");
+static RedPacket g_packetA(30.0, 5, "Owner A");
+static RedPacket g_packetB(50.0, 8, "Owner B");
+static RedPacket g_packetC(0.0, 1, "Owner C");
 static bool g_packetCReady = false;
 
 static tstring ToTString(const std::string& s)
@@ -51,14 +51,14 @@ static void AppendLog(LPCTSTR s)
 static std::string ReadNameOrDefault(unsigned short idEdit)
 {
 	tstring s = ReadText(idEdit);
-	if (s.empty()) return "匿名";
+	if (s.empty()) return "Anonymous";
 	return ToString(s);
 }
 
 static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, double money)
 {
 	TCHAR line[256] = { 0 };
-	StringCchPrintf(line, 256, TEXT("%s - %s 抢到 %.2f 元"),
+	StringCchPrintf(line, 256, TEXT("%s - %s grabbed %.2f"),
 		packetName, ToTString(grabber).c_str(), money);
 	AppendLog(line);
 }
@@ -75,7 +75,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 {
 	if (checkReady && !g_packetCReady)
 	{
-		AppendLog(TEXT("红包C尚未塞钱，无法开抢"));
+		AppendLog(TEXT("Packet C is not funded yet, cannot grab."));
 		return;
 	}
 
@@ -84,7 +84,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 	if (got <= 0.0)
 	{
 		TCHAR line[128] = { 0 };
-		StringCchPrintf(line, 128, TEXT("%s 已抢完"), packetName);
+		StringCchPrintf(line, 128, TEXT("%s is empty"), packetName);
 		AppendLog(line);
 		return;
 	}
@@ -94,7 +94,7 @@ static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetN
 static void OnFormLoad()
 {
 	g_form.IconSet(IDI_ICON1);
-	g_form.TextSet(TEXT("模拟微信抢红包"));
+	g_form.TextSet(TEXT("Red Packet Simulator"));
 	g_form.MoveToScreenCenter(920, 650);
 	g_form.BackColorSet(RGB(236, 236, 236));
 	g_form.KeyPreview = true;
@@ -114,27 +114,27 @@ static void OnFormLoad()
 	g_form.Control(ID_editCName, false).TextSet(TEXT(""));
 	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
 
-	AppendLog(TEXT("红包模拟程序已启动"));
+	AppendLog(TEXT("Red packet simulator started."));
 }
 
 static void OnAGrab()
 {
-	DoGrab(g_packetA, ID_editAName, TEXT("红包A"));
+	DoGrab(g_packetA, ID_editAName, TEXT("Packet A"));
 }
 
 static void OnAShow()
 {
-	AppendSummary(g_packetA, TEXT("红包A查看结果"));
+	AppendSummary(g_packetA, TEXT("Packet A summary"));
 }
 
 static void OnBGrab()
 {
-	DoGrab(g_packetB, ID_editBName, TEXT("红包B"));
+	DoGrab(g_packetB, ID_editBName, TEXT("Packet B"));
 }
 
 static void OnBShow()
 {
-	AppendSummary(g_packetB, TEXT("红包B查看结果"));
+	AppendSummary(g_packetB, TEXT("Packet B summary"));
 }
 
 static void OnCFill()
@@ -143,29 +143,29 @@ static void OnCFill()
 	int count = static_cast<int>(g_form.Control(ID_editCNum, false).TextVal());
 	if (money <= 0.0 || count <= 0)
 	{
-		AppendLog(TEXT("红包C塞钱失败：钱数和红包个数必须为正数"));
+		AppendLog(TEXT("Funding failed: money and count must both be positive."));
 		return;
 	}
 	if (!g_packetC.canSetMoney())
 	{
-		AppendLog(TEXT("红包C已被抢过，无法再次塞钱"));
+		AppendLog(TEXT("Packet C has already been grabbed and cannot be funded again."));
 		return;
 	}
 
 	g_packetC.setMoney(money, count);
 	g_packetCReady = true;
 	g_form.Control(ID_btnCGrab, false).EnabledSet(true);
-	AppendLog(TEXT("红包C塞钱成功，可开始抢红包"));
+	AppendLog(TEXT("Packet C funded successfully. You can now start grabbing."));
 }
 
 static void OnCGrab()
 {
-	DoGrab(g_packetC, ID_editCName, TEXT("红包C"), true);
+	DoGrab(g_packetC, ID_editCName, TEXT("Packet C"), true);
 }
 
 static void OnCShow()
 {
-	AppendSummary(g_packetC, TEXT("红包C查看结果"));
+	AppendSummary(g_packetC, TEXT("Packet C summary"));
 }
 
 int main()

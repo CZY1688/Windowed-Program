@@ -16,7 +16,7 @@ double RedPacket::Round2(double value)
 RedPacket::RedPacket(double money, int packetNum, std::string owner)
 	: total_money(money), num(packetNum > 0 ? packetNum : 1), grabbed(0), name(owner), arr(0)
 {
-	if (name.empty()) name = "未知";
+	if (name.empty()) name = "Unknown";
 	if (total_money < 0.0) total_money = 0.0;
 	arr = new std::string[num];
 }
@@ -46,7 +46,7 @@ void RedPacket::setMoney(double money, int packetNum)
 
 double RedPacket::grab(std::string grabberName)
 {
-	if (grabberName.empty()) grabberName = "匿名";
+	if (grabberName.empty()) grabberName = "Anonymous";
 	if (grabbed >= num) return 0.0;
 
 	double got = 0.0;
@@ -95,10 +95,10 @@ void RedPacket::show() const
 std::string RedPacket::summary() const
 {
 	std::ostringstream oss;
-	oss << "发红包者: " << name << "\n";
-	oss << "剩余金额: " << std::fixed << std::setprecision(2) << total_money << "\n";
-	oss << "总份数: " << num << "\n";
-	oss << "已抢份数: " << grabbed << "\n";
+	oss << "Owner: " << name << "\n";
+	oss << "Remaining: " << std::fixed << std::setprecision(2) << total_money << "\n";
+	oss << "Total count: " << num << "\n";
+	oss << "Grabbed count: " << grabbed << "\n";
 	for (int i = 0; i < grabbed; ++i)
 	{
 		oss << "  " << i + 1 << ". " << arr[i] << "\n";
