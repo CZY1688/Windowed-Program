@@ -2,6 +2,7 @@
 #include "BForm.h"
 #include "RedPacket.h"
 #include <strsafe.h>
+#include <tchar.h>
 #include <vector>
 
 static CBForm g_form(ID_form1);
@@ -55,6 +56,24 @@ static LPCTSTR TCN_CNum()
 static LPCTSTR TCN_CFill()
 {
 	return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305");
+}
+
+static bool TryBuildExeRelativeCoverPath(tstring& outPath)
+{
+	TCHAR modulePath[MAX_PATH] = { 0 };
+	DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
+	if (n == 0 || n >= MAX_PATH) return false;
+
+	TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
+	TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
+	TCHAR* pSlash = pSlashBack;
+	if (!pSlash || (pSlashFwd && pSlashFwd > pSlash)) pSlash = pSlashFwd;
+	if (!pSlash) return false;
+
+	*pSlash = 0;
+	outPath = modulePath;
+	outPath += TEXT("\\assets\\redpacket_cover.bmp");
+	return true;
 }
 
 static tstring ToTString(const std::string& s)
@@ -145,10 +164,27 @@ static void OnFormLoad()
 	g_form.BackColorSet(RGB(236, 236, 236));
 	g_form.KeyPreview = true;
 
-	DWORD attr = GetFileAttributes(kCoverBmpPath);
-	if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY) == 0)
-		g_form.Control(ID_picCover, false).PictureSet(kCoverBmpPath);
-	else
+	bool loadedCoverFromLocalBmp = false;
+	tstring coverPath;
+	if (TryBuildExeRelativeCoverPath(coverPath))
+	{
+		DWORD attrExeRel = GetFileAttributes(coverPath.c_str());
+		if (attrExeRel != INVALID_FILE_ATTRIBUTES && (attrExeRel & FILE_ATTRIBUTE_DIRECTORY) == 0)
+		{
+			g_form.Control(ID_picCover, false).PictureSet(coverPath.c_str());
+			loadedCoverFromLocalBmp = true;
+		}
+	}
+	if (!loadedCoverFromLocalBmp)
+	{
+		DWORD attrRel = GetFileAttributes(kCoverBmpPath);
+		if (attrRel != INVALID_FILE_ATTRIBUTES && (attrRel & FILE_ATTRIBUTE_DIRECTORY) == 0)
+		{
+			g_form.Control(ID_picCover, false).PictureSet(kCoverBmpPath);
+			loadedCoverFromLocalBmp = true;
+		}
+	}
+	if (!loadedCoverFromLocalBmp)
 		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 
 	LPCTSTR textGrab = TCN_Grab();
@@ -179,6 +215,10 @@ static void OnFormLoad()
 	g_form.Control(ID_editCName, false).TextSet(TEXT(""));
 	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
 
+	if (!loadedCoverFromLocalBmp)
+	{
+		AppendLog(TEXT("Local BMP not found, using embedded cover image."));
+	}
 	AppendLog(TEXT("Red packet simulator started."));
 }
 
@@ -236,7 +276,7 @@ static void OnCShow()
 int main()
 {
 	g_form.EventAdd(0, eForm_Load, OnFormLoad);
-	// Packet A controls are hidden at runtime, so cover click acts as the grab trigger.
+	// Packet A edit/button controls are hidden at runtime, so cover click triggers Packet A grab.
 	g_form.EventAdd(ID_picCover, eStatic_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
