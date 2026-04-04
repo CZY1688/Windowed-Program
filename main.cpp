@@ -266,14 +266,6 @@ if (s.empty()) return ToString(TCN_AnonymousUser());
 return ToString(s);
 }
 
-void ShowViewMsg(const RedPacket& packet, LPCTSTR packetLabel)
-{
-TCHAR msg[256] = { 0 };
-_stprintf_s(msg, _countof(msg), TEXT("%s\x67E5\x770B\x5B8C\x6210\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x3002"),
-	packetLabel, packet.grabbedCount(), packet.totalCount());
-MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
-}
-
 void ShowBestLuckMsg(const RedPacket& packet, LPCTSTR packetLabel)
 {
 std::string best = packet.bestLuckRecord();
