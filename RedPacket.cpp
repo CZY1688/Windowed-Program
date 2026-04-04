@@ -63,7 +63,7 @@ bool RedPacket::HasGrabbed(const std::string& grabberName) const
 
 double RedPacket::grab(std::string grabberName, int* outStatus)
 {
-	if (grabberName.empty()) grabberName = "Anonymous";
+	if (grabberName.empty()) grabberName = "匿名用户";
 	if (HasGrabbed(grabberName))
 	{
 		if (outStatus) *outStatus = GrabDuplicate;
