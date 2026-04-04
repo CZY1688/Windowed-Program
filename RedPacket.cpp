@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cerrno>
 
+// File-local defaults to keep implementation details private.
 namespace
 {
 constexpr const char* DEFAULT_GRABBER_NAME = "AnonymousUser";

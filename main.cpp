@@ -25,7 +25,7 @@ CBForm& Form()
 return m_form;
 }
 
-// UI text constants via \x escapes for legacy toolchain compatibility.
+// All TCN_* methods below are UI text constants via \x escapes for legacy toolchain compatibility.
 LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); } // 模拟微信抢红包
 LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包A（钱已塞好，直接开抢）
 LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包B（钱已塞好，直接开抢）
@@ -124,9 +124,9 @@ bool m_packetCReady;
 int m_robotIndex;
 
 // Split literals to avoid \x... consuming following hex-like chars in old compilers.
-LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // 红包A
-LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // 红包B
-LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // 红包C
+LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // Red Packet A
+LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // Red Packet B
+LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // Red Packet C
 
 int ShowInfoBox(LPCTSTR msg)
 {
