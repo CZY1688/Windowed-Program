@@ -92,19 +92,26 @@ double RedPacket::grab(std::string grabberName, int* outStatus)
 	{
 		double avg = total_money / remainCount;
 		double maxMoney = avg * 2.0;
-		if (maxMoney < 0.01) maxMoney = 0.01;
+		double minMoney = 0.01;
+		double minRemain = static_cast<double>(remainCount - 1) * 0.01;
+		double upperByRemain = total_money - minRemain;
+		if (upperByRemain < minMoney) upperByRemain = minMoney;
+		if (maxMoney > upperByRemain) maxMoney = upperByRemain;
+		if (maxMoney < minMoney) maxMoney = minMoney;
 
 		static thread_local std::mt19937 rng(std::random_device{}());
-		std::uniform_real_distribution<double> dist(0.0001, 1.0);
-		double unit = dist(rng);
-		got = Round2(unit * maxMoney);
-		if (got < 0.01) got = 0.01;
+		int minFen = static_cast<int>(minMoney * 100.0 + 0.5);
+		int maxFen = static_cast<int>(maxMoney * 100.0 + 0.5);
+		if (maxFen < minFen) maxFen = minFen;
+		std::uniform_int_distribution<int> distFen(minFen, maxFen);
+		got = static_cast<double>(distFen(rng)) / 100.0;
+		got = Round2(got);
+		if (got < minMoney) got = minMoney;
 
-		double minRemain = static_cast<double>(remainCount - 1) * 0.01;
 		if (total_money - got < minRemain)
 		{
 			got = Round2(total_money - minRemain);
-			if (got < 0.01) got = 0.01;
+			if (got < minMoney) got = minMoney;
 		}
 	}
 
