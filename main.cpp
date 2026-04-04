@@ -10,12 +10,20 @@
 class RedPacketApp
 {
 public:
+enum ECurrentPacket
+{
+CurrentPacketA = 0,
+CurrentPacketB = 1,
+CurrentPacketC = 2
+};
+
 RedPacketApp()
 : m_form(ID_form1),
   m_packetA(30.0, 5, "Owner A"),
   m_packetB(50.0, 8, "Owner B"),
   m_packetC(0.0, 1, "Owner C"),
   m_packetCReady(false),
+  m_currentPacket(CurrentPacketA),
   m_robotIndex(1)
 {
 }
@@ -74,9 +82,9 @@ void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); 
 void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
 void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
 
-void OnAShow() { LPCTSTR label = PacketLabelA(); ShowPacketLog(m_packetA, label); }
-void OnBShow() { LPCTSTR label = PacketLabelB(); ShowPacketLog(m_packetB, label); }
-void OnCShow() { LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label); }
+void OnAShow() { m_currentPacket = CurrentPacketA; LPCTSTR label = PacketLabelA(); ShowPacketLog(m_packetA, label); }
+void OnBShow() { m_currentPacket = CurrentPacketB; LPCTSTR label = PacketLabelB(); ShowPacketLog(m_packetB, label); }
+void OnCShow() { m_currentPacket = CurrentPacketC; LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label); }
 
 void OnCFill()
 {
@@ -108,11 +116,13 @@ ShowPacketLog(m_packetC, PacketLabelC());
 
 void OnRobotGrab()
 {
-// Robot grabs available packets in A->B->C priority.
-if (TryRobotGrabPacket(m_packetA, PacketLabelA(), false, false)) return;
-if (TryRobotGrabPacket(m_packetB, PacketLabelB(), false, true)) return;
-if (TryRobotGrabPacket(m_packetC, PacketLabelC(), true, false)) return;
-ShowWarnBox(TEXT("\x76EE\x524D\x6CA1\x6709\x53EF\x62A2\x7684\x7EA2\x5305\x3002"));
+// Robot only grabs the packet currently being viewed.
+DoGrabCurrentWithName(NextRobotName());
+}
+
+void OnCoverClickGrabCurrent()
+{
+DoGrabCurrentFromInput();
 }
 
 private:
@@ -121,12 +131,20 @@ RedPacket m_packetA;
 RedPacket m_packetB;
 RedPacket m_packetC;
 bool m_packetCReady;
+ECurrentPacket m_currentPacket;
 int m_robotIndex;
 
 // Split literals to avoid \x... consuming following hex-like chars in old compilers.
 LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // Red Packet A
 LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // Red Packet B
 LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // Red Packet C
+
+std::string NextRobotName()
+{
+TCHAR robotName[64] = { 0 };
+_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
+return ToString(tstring(robotName));
+}
 
 int ShowInfoBox(LPCTSTR msg)
 {
@@ -374,15 +392,40 @@ m_form.Control(ID_editLog, false).TextSet(TEXT(""));
 	UpdateLeftFooter(packet, packetLabel);
 }
 
-bool TryRobotGrabPacket(RedPacket& packet, LPCTSTR packetLabel, bool checkReady, bool showResultText)
+void DoGrabCurrentFromInput()
 {
-if (checkReady && !m_packetCReady) return false;
-if (packet.grabbedCount() >= packet.totalCount()) return false;
+if (m_currentPacket == CurrentPacketA)
+{
+	DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false);
+	return;
+}
+if (m_currentPacket == CurrentPacketB)
+{
+	DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true);
+	return;
+}
+DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false);
+}
 
-TCHAR robotName[64] = { 0 };
-_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
-DoGrabWithName(packet, ToString(robotName), packetLabel, showResultText);
-return true;
+void DoGrabCurrentWithName(const std::string& who)
+{
+if (m_currentPacket == CurrentPacketA)
+{
+	DoGrabWithName(m_packetA, who, PacketLabelA(), false);
+	return;
+}
+if (m_currentPacket == CurrentPacketB)
+{
+	DoGrabWithName(m_packetB, who, PacketLabelB(), true);
+	return;
+}
+if (!m_packetCReady)
+{
+	UpdateLeftFooter(m_packetC, PacketLabelC());
+	ShowWarnBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"));
+	return;
+}
+DoGrabWithName(m_packetC, who, PacketLabelC(), false);
 }
 
 void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetLabel, bool checkReady, bool showResultText)
@@ -439,11 +482,12 @@ void AppOnCFill() { g_app.OnCFill(); }
 void AppOnCGrab() { g_app.OnCGrab(); }
 void AppOnCShow() { g_app.OnCShow(); }
 void AppOnRobotGrab() { g_app.OnRobotGrab(); }
+void AppOnCoverClickGrabCurrent() { g_app.OnCoverClickGrabCurrent(); }
 
 int main()
 {
 g_app.Form().EventAdd(0, eForm_Load, AppOnFormLoad);
-g_app.Form().EventAdd(ID_picCover, eStatic_Click, AppOnAGrab);
+g_app.Form().EventAdd(ID_picCover, eStatic_Click, AppOnCoverClickGrabCurrent);
 g_app.Form().EventAdd(ID_btnAGrab, eCommandButton_Click, AppOnAGrab);
 g_app.Form().EventAdd(ID_btnAShow, eCommandButton_Click, AppOnAShow);
 g_app.Form().EventAdd(ID_btnBGrab, eCommandButton_Click, AppOnBGrab);
