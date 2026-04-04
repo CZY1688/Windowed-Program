@@ -32,6 +32,7 @@
 #define ID_editCName                    1046
 #define ID_btnCGrab                     1047
 #define ID_btnCShow                     1048
+#define ID_txtResult                    1049
 
 // Next default values for new objects
 // 
@@ -39,7 +40,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        105
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1049
+#define _APS_NEXT_CONTROL_VALUE         1050
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
