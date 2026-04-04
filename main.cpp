@@ -81,16 +81,18 @@ void OnCFill()
 // 中文注释：红包 C 必须先塞钱成功，才能允许用户点击“抢红包”。
 double money = m_form.Control(ID_editCMoney, false).TextVal();
 int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
-if (money <= 0.0 || count <= 0)
-{
-ShowWarnBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E\x0030\x3002"));
-return;
-}
-if (!m_packetC.canSetMoney())
-{
-ShowWarnBox(TEXT("\x7EA2\x5305\x43\x5DF2\x6709\x7528\x6237\x62A2\x8FC7\xFF0C\x4E0D\x80FD\x91CD\x65B0\x585E\x94B1\x3002"));
-return;
-}
+	if (money <= 0.0 || count <= 0)
+	{
+		UpdateLeftFooter(m_packetC, PacketLabelC());
+		ShowWarnBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E\x0030\x3002"));
+		return;
+	}
+	if (!m_packetC.canSetMoney())
+	{
+		UpdateLeftFooter(m_packetC, PacketLabelC());
+		ShowWarnBox(TEXT("\x7EA2\x5305\x43\x5DF2\x6709\x7528\x6237\x62A2\x8FC7\xFF0C\x4E0D\x80FD\x91CD\x65B0\x585E\x94B1\x3002"));
+		return;
+	}
 
 m_packetC.setMoney(money, count);
 m_packetCReady = true;
@@ -382,11 +384,12 @@ return true;
 
 void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetLabel, bool checkReady, bool showResultText)
 {
-if (checkReady && !m_packetCReady)
-{
-ShowWarnBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"));
-return;
-}
+	if (checkReady && !m_packetCReady)
+	{
+		UpdateLeftFooter(packet, packetLabel);
+		ShowWarnBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"));
+		return;
+	}
 std::string who = ReadNameOrDefault(idNameEdit);
 DoGrabWithName(packet, who, packetLabel, showResultText);
 }
@@ -395,21 +398,23 @@ void DoGrabWithName(RedPacket& packet, const std::string& who, LPCTSTR packetLab
 {
 int status = RedPacket::GrabEmpty;
 double got = packet.grab(who, &status);
-if (status == RedPacket::GrabDuplicate)
-{
-TCHAR msg[256] = { 0 };
-_stprintf_s(msg, _countof(msg), TEXT("%s \x5DF2\x7ECF\x62A2\x8FC7%s\xFF0C\x6BCF\x4E2A\x7528\x6237\x53EA\x80FD\x62A2\x4E00\x6B21\x3002"), ToTString(who).c_str(), packetLabel);
-ShowWarnBox(msg);
-return;
-}
-if (got <= 0.0)
-{
-TCHAR msg[256] = { 0 };
-_stprintf_s(msg, _countof(msg), TEXT("%s\x5DF2\x62A2\x5B8C\xFF0C\x624B\x6162\x4E86\xFF01"), packetLabel);
-ShowWarnBox(msg);
-if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002"));
-ShowBestLuckMsg(packet, packetLabel);
-return;
+	if (status == RedPacket::GrabDuplicate)
+	{
+		TCHAR msg[256] = { 0 };
+		_stprintf_s(msg, _countof(msg), TEXT("%s \x5DF2\x7ECF\x62A2\x8FC7%s\xFF0C\x6BCF\x4E2A\x7528\x6237\x53EA\x80FD\x62A2\x4E00\x6B21\x3002"), ToTString(who).c_str(), packetLabel);
+		UpdateLeftFooter(packet, packetLabel);
+		ShowWarnBox(msg);
+		return;
+	}
+	if (got <= 0.0)
+	{
+		TCHAR msg[256] = { 0 };
+		_stprintf_s(msg, _countof(msg), TEXT("%s\x5DF2\x62A2\x5B8C\xFF0C\x624B\x6162\x4E86\xFF01"), packetLabel);
+		UpdateLeftFooter(packet, packetLabel);
+		ShowWarnBox(msg);
+		if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002"));
+		ShowBestLuckMsg(packet, packetLabel);
+		return;
 }
 
 TCHAR msg[256] = { 0 };
