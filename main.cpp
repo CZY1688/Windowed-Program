@@ -77,9 +77,9 @@ void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); 
 void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
 void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
 
-void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); }
-void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); }
-void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); }
+void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); ShowViewMsg(m_packetA, PacketLabelA()); }
+void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); ShowViewMsg(m_packetB, PacketLabelB()); }
+void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); ShowViewMsg(m_packetC, PacketLabelC()); }
 
 void OnCFill()
 {
@@ -259,12 +259,20 @@ tstring ReadText(unsigned short idEdit)
 return m_form.Control(idEdit, false).Text();
 }
 
-std::string ReadNameOrDefault(unsigned short idEdit)
-{
-tstring s = ReadText(idEdit);
-if (s.empty()) return ToString(TCN_AnonymousUser());
-return ToString(s);
-}
+	std::string ReadNameOrDefault(unsigned short idEdit)
+	{
+	tstring s = ReadText(idEdit);
+	if (s.empty()) return ToString(TCN_AnonymousUser());
+	return ToString(s);
+	}
+
+	void ShowViewMsg(const RedPacket& packet, LPCTSTR packetLabel)
+	{
+	TCHAR msg[256] = { 0 };
+	_stprintf_s(msg, _countof(msg), TEXT("%s\x67E5\x770B\x5B8C\x6210\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x3002"),
+		packetLabel, packet.grabbedCount(), packet.totalCount());
+	MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
+	}
 
 void AppendLog(LPCTSTR s)
 {
@@ -311,30 +319,36 @@ _stprintf_s(title, _countof(title), TEXT("%s\x62A2\x5305\x8BB0\x5F55"), packetLa
 AppendLog(title);
 AppendLog(TEXT("--------------------------------------------------"));
 
-std::vector<std::string> list = packet.records();
-if (list.empty())
-{
-AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55\x3002"));
-}
-else
+	std::vector<std::string> list = packet.records();
+	std::string best = packet.bestLuckRecord();
+	std::string bestWho;
+	std::string bestMoney;
+	bool hasBest = ParseNameMoney(best, bestWho, bestMoney);
+	if (list.empty())
+	{
+	AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55\x3002"));
+	}
+	else
 {
 AppendLog(TEXT("\x7528\x6237\x5217\x8868\xFF1A"));
 for (size_t i = 0; i < list.size(); ++i)
 {
 std::string who;
 std::string money;
-if (!ParseNameMoney(list[i], who, money)) continue;
-TCHAR line[256] = { 0 };
-_stprintf_s(line, _countof(line), TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143"),
-static_cast<int>(i + 1), ToTString(who).c_str(), ToTString(money).c_str());
-AppendLog(line);
-}
-}
+	if (!ParseNameMoney(list[i], who, money)) continue;
+	TCHAR line[256] = { 0 };
+	bool isBest = hasBest && who == bestWho && money == bestMoney;
+	_stprintf_s(line, _countof(line), isBest
+		? TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143\x3000\x3010\x624B\x6C14\x6700\x4F73\x3011")
+		: TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143"),
+		static_cast<int>(i + 1), ToTString(who).c_str(), ToTString(money).c_str());
+	AppendLog(line);
+	}
+	}
 
-std::string best = packet.bestLuckRecord();
-if (best.empty())
-{
-AppendLog(TEXT("\x624B\x6C14\x6700\x4F73\xFF1A\x6682\x65E0"));
+	if (best.empty())
+	{
+	AppendLog(TEXT("\x624B\x6C14\x6700\x4F73\xFF1A\x6682\x65E0"));
 }
 else
 {
