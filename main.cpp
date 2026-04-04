@@ -321,9 +321,7 @@ AppendLog(TEXT("--------------------------------------------------"));
 
 	std::vector<std::string> list = packet.records();
 	std::string best = packet.bestLuckRecord();
-	std::string bestWho;
-	std::string bestMoney;
-	bool hasBest = ParseNameMoney(best, bestWho, bestMoney);
+	bool hasBest = !best.empty();
 	if (list.empty())
 	{
 	AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55\x3002"));
@@ -337,7 +335,7 @@ std::string who;
 std::string money;
 	if (!ParseNameMoney(list[i], who, money)) continue;
 	TCHAR line[256] = { 0 };
-	bool isBest = hasBest && who == bestWho && money == bestMoney;
+	bool isBest = hasBest && list[i] == best;
 	_stprintf_s(line, _countof(line), isBest
 		? TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143\x3000\x3010\x624B\x6C14\x6700\x4F73\x3011")
 		: TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143"),
