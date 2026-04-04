@@ -88,7 +88,7 @@ double money = m_form.Control(ID_editCMoney, false).TextVal();
 int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
 if (money <= 0.0 || count <= 0)
 {
-MsgBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E0\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+MsgBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E\x0030\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
 return;
 }
 if (!m_packetC.canSetMoney())
