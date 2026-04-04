@@ -270,6 +270,26 @@ static void OnFormLoad()
 	g_form.Control(ID_btnCShow, false).VisibleSet(true);
 	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
 
+	// Keep group boxes behind interactive controls to avoid covering children.
+	g_form.Control(ID_grpA, false).ZOrder(1);
+	g_form.Control(ID_grpB, false).ZOrder(1);
+	g_form.Control(ID_grpC, false).ZOrder(1);
+	g_form.Control(ID_editAName, false).ZOrder(0);
+	g_form.Control(ID_btnAGrab, false).ZOrder(0);
+	g_form.Control(ID_btnAShow, false).ZOrder(0);
+	g_form.Control(ID_editBName, false).ZOrder(0);
+	g_form.Control(ID_btnBGrab, false).ZOrder(0);
+	g_form.Control(ID_btnBShow, false).ZOrder(0);
+	g_form.Control(ID_txtResult, false).ZOrder(0);
+	g_form.Control(ID_txtCMoney, false).ZOrder(0);
+	g_form.Control(ID_editCMoney, false).ZOrder(0);
+	g_form.Control(ID_txtCNum, false).ZOrder(0);
+	g_form.Control(ID_editCNum, false).ZOrder(0);
+	g_form.Control(ID_btnCFill, false).ZOrder(0);
+	g_form.Control(ID_editCName, false).ZOrder(0);
+	g_form.Control(ID_btnCGrab, false).ZOrder(0);
+	g_form.Control(ID_btnCShow, false).ZOrder(0);
+
 	if (!loadedCoverFromLocalBmp)
 	{
 		AppendLog(TEXT("Local BMP not found, using embedded cover image."));
