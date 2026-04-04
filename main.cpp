@@ -209,7 +209,7 @@ static void OnFormLoad()
 	// Keep window icon setup: required by assignment and runtime UX.
 	g_form.IconSet(IDI_ICON1);
 	g_form.TextSet(TCN_WindowTitle());
-	g_form.MoveToScreenCenter(920, 650);
+	g_form.MoveToScreenCenter();
 	g_form.BackColorSet(RGB(236, 236, 236));
 	g_form.KeyPreview = true;
 
