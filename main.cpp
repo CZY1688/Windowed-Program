@@ -4,8 +4,6 @@
 #include <strsafe.h>
 #include <tchar.h>
 #include <vector>
-#include <cstdio>
-#include <cstring>
 
 class RedPacketApp
 {

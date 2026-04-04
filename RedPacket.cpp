@@ -7,6 +7,7 @@
 #include <random>
 #include <sstream>
 #include <cstdlib>
+#include <cerrno>
 
 double RedPacket::Round2(double value) const
 {
@@ -167,7 +168,10 @@ std::string RedPacket::bestLuckRecord() const
 		if (pos == std::string::npos) continue;
 		std::string who = arr[i].substr(0, pos);
 		std::string moneyText = arr[i].substr(pos + 1);
-		double money = std::atof(moneyText.c_str());
+		char* pEnd = 0;
+		errno = 0;
+		double money = std::strtod(moneyText.c_str(), &pEnd);
+		if (pEnd == moneyText.c_str() || errno == ERANGE) continue;
 		if (money > bestMoney)
 		{
 			bestMoney = money;
