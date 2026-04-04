@@ -65,12 +65,7 @@ m_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 ApplyRuntimeTexts();
 ResetUIState();
 
-if (!loadedCoverFromLocalBmp)
-{
-AppendLog(TEXT("\x672A\x627E\x5230\x672C\x5730\x5C01\x9762\x56FE\xFF0C\x5DF2\x4F7F\x7528\x5185\x7F6E\x56FE\x7247\x3002"));
-}
-AppendLog(TEXT("\x7EA2\x5305\x6A21\x62DF\x7A0B\x5E8F\x5DF2\x542F\x52A8\x3002"));
-UpdateLeftFooter(m_packetA, PacketLabelA());
+	UpdateLeftFooter(m_packetA, PacketLabelA());
 }
 
 void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); }
@@ -323,9 +318,13 @@ m_form.Control(ID_txtResult, false).TextSet(line);
 
 void UpdateLeftFooter(const RedPacket& packet, LPCTSTR packetLabel)
 {
-TCHAR line[256] = { 0 };
-_stprintf_s(line, _countof(line), TEXT("%s\xFF1A\x5DF2\x62A2 %d / %d \x4E2A"), packetLabel, packet.grabbedCount(), packet.totalCount());
-m_form.Control(ID_txtLeftStatic, false).TextSet(line);
+	TCHAR line[256] = { 0 };
+	int grabbed = packet.grabbedCount();
+	int total = packet.totalCount();
+	int left = total - grabbed;
+	if (left < 0) left = 0;
+	_stprintf_s(line, _countof(line), TEXT("%s\xFF1A\x5DF2\x62A2 %d \x4E2A\xFF0C\x5269\x4F59 %d \x4E2A"), packetLabel, grabbed, left);
+	m_form.Control(ID_txtLeftStatic, false).TextSet(line);
 }
 
 bool ParseNameMoney(const std::string& src, std::string& outName, std::string& outMoney)
@@ -339,26 +338,35 @@ return true;
 
 void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
 {
-// 中文注释：查看按钮每次完全清空日志，仅展示当前红包“抢红包情况”状态。
+// 中文注释：查看/抢包后覆盖刷新日志，只显示中文明细，不显示英文报告式摘要。
 m_form.Control(ID_editLog, false).TextSet(TEXT(""));
-TCHAR title[128] = { 0 };
-_stprintf_s(title, _countof(title), TEXT("%s\x62A2\x7EA2\x5305\x60C5\x51B5\xFF1A"), packetLabel);
-AppendLog(title);
-
-TCHAR progress[128] = { 0 };
-_stprintf_s(progress, _countof(progress), TEXT("\x5F53\x524D\x8FDB\x5EA6\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x3002"), packet.grabbedCount(), packet.totalCount());
-AppendLog(progress);
-
-if (packet.grabbedCount() >= packet.totalCount())
-{
-AppendLog(TEXT("\x72B6\x6001\xFF1A\x5DF2\x62A2\x5B8C\x3002"));
-}
-else
-{
-AppendLog(TEXT("\x72B6\x6001\xFF1A\x62A2\x5305\x8FDB\x884C\x4E2D\x3002"));
-}
-
-UpdateLeftFooter(packet, packetLabel);
+	std::vector<std::string> recs = packet.records();
+	std::string best = packet.bestLuckRecord();
+	AppendLog(TEXT("\x62A2\x7EA2\x5305\x8BB0\x5F55\xFF1A"));
+	for (size_t i = 0; i < recs.size(); ++i)
+	{
+		std::string who;
+		std::string money;
+		TCHAR line[256] = { 0 };
+		if (ParseNameMoney(recs[i], who, money))
+		{
+			if (!best.empty() && recs[i] == best)
+			{
+				_stprintf_s(line, _countof(line), TEXT("%s \x62A2\x5230\x4E86 %s \x5143\xFF0C\x624B\x6C14\x6700\x4F73\xFF01"), ToTString(who).c_str(), ToTString(money).c_str());
+			}
+			else
+			{
+				_stprintf_s(line, _countof(line), TEXT("%s \x62A2\x5230\x4E86 %s \x5143"), ToTString(who).c_str(), ToTString(money).c_str());
+			}
+		}
+		else
+		{
+			_stprintf_s(line, _countof(line), TEXT("%s"), ToTString(recs[i]).c_str());
+		}
+		AppendLog(line);
+	}
+	if (recs.empty()) AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55"));
+	UpdateLeftFooter(packet, packetLabel);
 }
 
 bool TryRobotGrabPacket(RedPacket& packet, LPCTSTR packetLabel, bool checkReady, bool showResultText)
