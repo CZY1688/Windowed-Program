@@ -4,367 +4,432 @@
 #include <strsafe.h>
 #include <tchar.h>
 #include <vector>
+#include <cstdio>
+#include <cstring>
 
-static CBForm g_form(ID_form1);
-
-static RedPacket g_packetA(30.0, 5, "Owner A");
-static RedPacket g_packetB(50.0, 8, "Owner B");
-static RedPacket g_packetC(0.0, 1, "Owner C");
-static bool g_packetCReady = false;
-static LPCTSTR kCoverBmpPath = TEXT("assets\\redpacket_cover.bmp");
-static LPCTSTR kCoverBmpRelativeToExe = TEXT("\\assets\\redpacket_cover.bmp");
-
-// Runtime Chinese text is provided via Unicode escapes to keep source/resource ASCII-safe
-// for legacy VC2010/CP936 toolchains while still showing Chinese UI at runtime.
-static LPCTSTR TCN_WindowTitle()
+class RedPacketApp
 {
-	return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305");
+public:
+RedPacketApp()
+: m_form(ID_form1),
+  m_packetA(30.0, 5, "Owner A"),
+  m_packetB(50.0, 8, "Owner B"),
+  m_packetC(0.0, 1, "Owner C"),
+  m_packetCReady(false),
+  m_robotIndex(1)
+{
 }
 
-static LPCTSTR TCN_GroupA()
+CBForm& Form()
 {
-	return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09");
+return m_form;
 }
 
-static LPCTSTR TCN_GroupB()
+// 中文界面常量（使用 \x 转义，兼容旧工具链编码）
+LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
+LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
+LPCTSTR TCN_GroupC() const { return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09"); }
+LPCTSTR TCN_Grab() const { return TEXT("\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_View() const { return TEXT("\x67E5\x770B"); }
+LPCTSTR TCN_RobotGrab() const { return TEXT("\x673A\x5668\x4EBA\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_CMoney() const { return TEXT("\x94B1\x6570(\x5143)\xFF1A"); }
+LPCTSTR TCN_CNum() const { return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A"); }
+LPCTSTR TCN_CFill() const { return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305"); }
+LPCTSTR TCN_ResultDefault() const { return TEXT(""); }
+LPCTSTR TCN_TitleInfo() const { return TEXT("\x63D0\x793A"); }
+LPCTSTR TCN_TitleWarn() const { return TEXT("\x8B66\x544A"); }
+
+void OnFormLoad()
 {
-	return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09");
+m_form.IconSet(IDI_ICON1);
+m_form.TextSet(TCN_WindowTitle());
+m_form.MoveToScreenCenter();
+m_form.BackColorSet(RGB(236, 236, 236));
+m_form.KeyPreview = true;
+
+bool loadedCoverFromLocalBmp = false;
+tstring coverPath;
+if (TryBuildExeRelativeCoverPath(coverPath))
+{
+loadedCoverFromLocalBmp = TryLoadCoverFromPath(coverPath.c_str());
+}
+if (!loadedCoverFromLocalBmp)
+{
+loadedCoverFromLocalBmp = TryLoadCoverFromPath(TEXT("assets\\redpacket_cover.bmp"));
+}
+if (!loadedCoverFromLocalBmp)
+{
+m_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
 }
 
-static LPCTSTR TCN_GroupC()
+ApplyRuntimeTexts();
+ResetUIState();
+
+if (!loadedCoverFromLocalBmp)
 {
-	return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09");
+AppendLog(TEXT("\x672A\x627E\x5230\x672C\x5730\x5C01\x9762\x56FE\xFF0C\x5DF2\x4F7F\x7528\x5185\x7F6E\x56FE\x7247\x3002"));
+}
+AppendLog(TEXT("\x7EA2\x5305\x6A21\x62DF\x7A0B\x5E8F\x5DF2\x542F\x52A8\x3002"));
+UpdateLeftFooter(m_packetA, PacketLabelA());
 }
 
-static LPCTSTR TCN_Grab()
+void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); }
+void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
+void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
+
+void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); }
+void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); }
+void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); }
+
+void OnCFill()
 {
-	return TEXT("\x62A2\x7EA2\x5305");
+// 中文注释：红包 C 必须先塞钱成功，才能允许用户点击“抢红包”。
+double money = m_form.Control(ID_editCMoney, false).TextVal();
+int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
+if (money <= 0.0 || count <= 0)
+{
+MsgBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E\x0030\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+return;
+}
+if (!m_packetC.canSetMoney())
+{
+MsgBox(TEXT("\x7EA2\x5305\x43\x5DF2\x6709\x7528\x6237\x62A2\x8FC7\xFF0C\x4E0D\x80FD\x91CD\x65B0\x585E\x94B1\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+return;
 }
 
-static LPCTSTR TCN_View()
-{
-	return TEXT("\x67E5\x770B");
+m_packetC.setMoney(money, count);
+m_packetCReady = true;
+m_form.Control(ID_btnCGrab, false).EnabledSet(true);
+
+TCHAR msg[128] = { 0 };
+_stprintf_s(msg, _countof(msg), TEXT("\x585E\x94B1\x6210\x529F\xFF01\x5DF2\x8BBE\x7F6E %.2f \x5143\xFF0C\x5171 %d \x4E2A\x7EA2\x5305\x3002"), money, count);
+MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
+ShowPacketLog(m_packetC, PacketLabelC());
 }
 
-static LPCTSTR TCN_CMoney()
+void OnRobotGrab()
 {
-	return TEXT("\x94B1\x6570(\x5143)\xFF1A");
+// 中文注释：机器人按 A->B->C 优先级抢可用红包，便于老师演示自动抢包功能。
+if (TryRobotGrabPacket(m_packetA, PacketLabelA(), false, false)) return;
+if (TryRobotGrabPacket(m_packetB, PacketLabelB(), false, true)) return;
+if (TryRobotGrabPacket(m_packetC, PacketLabelC(), true, false)) return;
+MsgBox(TEXT("\x76EE\x524D\x6CA1\x6709\x53EF\x62A2\x7684\x7EA2\x5305\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
 }
 
-static LPCTSTR TCN_CNum()
+private:
+CBForm m_form;
+RedPacket m_packetA;
+RedPacket m_packetB;
+RedPacket m_packetC;
+bool m_packetCReady;
+int m_robotIndex;
+
+LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305A"); }
+LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305B"); }
+LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305C"); }
+
+void ApplyRuntimeTexts()
 {
-	return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A");
+LPCTSTR textGrab = TCN_Grab();
+LPCTSTR textView = TCN_View();
+m_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
+m_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
+m_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
+m_form.Control(ID_btnAGrab, false).TextSet(textGrab);
+m_form.Control(ID_btnAShow, false).TextSet(textView);
+m_form.Control(ID_btnBGrab, false).TextSet(textGrab);
+m_form.Control(ID_btnBShow, false).TextSet(textView);
+m_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
+m_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
+m_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
+m_form.Control(ID_btnCGrab, false).TextSet(textGrab);
+m_form.Control(ID_btnCShow, false).TextSet(textView);
+m_form.Control(ID_btnRobotGrab, false).TextSet(TCN_RobotGrab());
+m_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
+m_form.Control(ID_txtSep, false).VisibleSet(false);
 }
 
-static LPCTSTR TCN_CFill()
+void ResetUIState()
 {
-	return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305");
+m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+
+m_form.Control(ID_editAName, false).TextSet(TEXT(""));
+m_form.Control(ID_btnAGrab, false).VisibleSet(true);
+m_form.Control(ID_btnAShow, false).VisibleSet(true);
+m_form.Control(ID_editAName, false).VisibleSet(true);
+
+m_form.Control(ID_editBName, false).TextSet(TEXT(""));
+m_form.Control(ID_editBName, false).VisibleSet(true);
+m_form.Control(ID_btnBGrab, false).VisibleSet(true);
+m_form.Control(ID_btnBShow, false).VisibleSet(true);
+m_form.Control(ID_txtResult, false).VisibleSet(true);
+
+m_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
+m_form.Control(ID_editCNum, false).TextSet(TEXT(""));
+m_form.Control(ID_editCName, false).TextSet(TEXT(""));
+m_form.Control(ID_txtCMoney, false).VisibleSet(true);
+m_form.Control(ID_editCMoney, false).VisibleSet(true);
+m_form.Control(ID_txtCNum, false).VisibleSet(true);
+m_form.Control(ID_editCNum, false).VisibleSet(true);
+m_form.Control(ID_btnCFill, false).VisibleSet(true);
+m_form.Control(ID_editCName, false).VisibleSet(true);
+m_form.Control(ID_btnCGrab, false).VisibleSet(true);
+m_form.Control(ID_btnCShow, false).VisibleSet(true);
+m_form.Control(ID_btnCGrab, false).EnabledSet(false);
+m_form.Control(ID_btnRobotGrab, false).VisibleSet(true);
+
+m_form.Control(ID_grpA, false).ZOrder(1);
+m_form.Control(ID_grpB, false).ZOrder(1);
+m_form.Control(ID_grpC, false).ZOrder(1);
+m_form.Control(ID_editAName, false).ZOrder(0);
+m_form.Control(ID_btnAGrab, false).ZOrder(0);
+m_form.Control(ID_btnAShow, false).ZOrder(0);
+m_form.Control(ID_editBName, false).ZOrder(0);
+m_form.Control(ID_btnBGrab, false).ZOrder(0);
+m_form.Control(ID_btnBShow, false).ZOrder(0);
+m_form.Control(ID_txtResult, false).ZOrder(0);
+m_form.Control(ID_txtCMoney, false).ZOrder(0);
+m_form.Control(ID_editCMoney, false).ZOrder(0);
+m_form.Control(ID_txtCNum, false).ZOrder(0);
+m_form.Control(ID_editCNum, false).ZOrder(0);
+m_form.Control(ID_btnCFill, false).ZOrder(0);
+m_form.Control(ID_editCName, false).ZOrder(0);
+m_form.Control(ID_btnCGrab, false).ZOrder(0);
+m_form.Control(ID_btnCShow, false).ZOrder(0);
+m_form.Control(ID_btnRobotGrab, false).ZOrder(0);
 }
 
-static LPCTSTR TCN_ResultDefault()
+bool TryBuildExeRelativeCoverPath(tstring& outPath)
 {
-	return TEXT("");
+TCHAR modulePath[MAX_PATH] = { 0 };
+DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
+if (n == 0 || n == MAX_PATH) return false;
+
+TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
+TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
+TCHAR* pSlash = pSlashBack;
+if (!pSlash || (pSlashFwd && pSlashFwd > pSlash)) pSlash = pSlashFwd;
+if (!pSlash) return false;
+
+*pSlash = 0;
+outPath = modulePath;
+outPath += TEXT("\\assets\\redpacket_cover.bmp");
+return true;
 }
 
-static LPCTSTR TCN_GrabFailHint()
+bool TryLoadCoverFromPath(LPCTSTR bmpPath)
 {
-	return TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002");
+DWORD attr = GetFileAttributes(bmpPath);
+if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
+{
+return false;
+}
+m_form.Control(ID_picCover, false).PictureSet(bmpPath);
+return true;
 }
 
-// Build an exe-relative path so local bmp works even when cwd is different.
-static bool TryBuildExeRelativeCoverPath(tstring& outPath)
-{
-	TCHAR modulePath[MAX_PATH] = { 0 };
-	DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
-	if (n == 0 || n == MAX_PATH) return false;
-
-	TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
-	TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
-	TCHAR* pSlash = pSlashBack;
-	if (!pSlash || (pSlashFwd && pSlashFwd > pSlash)) pSlash = pSlashFwd;
-	if (!pSlash) return false;
-
-	*pSlash = 0;
-	outPath = modulePath;
-	outPath += kCoverBmpRelativeToExe;
-	return true;
-}
-
-// Try loading cover bmp from a file path; returns true on success.
-static bool TryLoadCoverFromPath(LPCTSTR bmpPath)
-{
-	DWORD attr = GetFileAttributes(bmpPath);
-	if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
-	{
-		return false;
-	}
-	g_form.Control(ID_picCover, false).PictureSet(bmpPath);
-	return true;
-}
-
-static tstring ToTString(const std::string& s)
+tstring ToTString(const std::string& s)
 {
 #ifdef UNICODE
-	int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
-	if (len <= 0) return TEXT("");
-	std::vector<wchar_t> buf(len);
-	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
-	return tstring(&buf[0]);
+int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
+if (len <= 0) return TEXT("");
+std::vector<wchar_t> buf(len);
+MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
+return tstring(&buf[0]);
 #else
-	return s;
+return s;
 #endif
 }
 
-static std::string ToString(const tstring& s)
+std::string ToString(const tstring& s)
 {
 #ifdef UNICODE
-	int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
-	if (len <= 0) return std::string();
-	std::vector<char> buf(len);
-	WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
-	return std::string(&buf[0]);
+int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
+if (len <= 0) return std::string();
+std::vector<char> buf(len);
+WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
+return std::string(&buf[0]);
 #else
-	return s;
+return s;
 #endif
 }
 
-static tstring ReadText(unsigned short idEdit)
+tstring ReadText(unsigned short idEdit)
 {
-	return g_form.Control(idEdit, false).Text();
+return m_form.Control(idEdit, false).Text();
 }
 
-// Unified log output: append one line and newline into the left log box.
-static void AppendLog(LPCTSTR s)
+std::string ReadNameOrDefault(unsigned short idEdit)
 {
-	g_form.Control(ID_editLog, false).TextAdd(s);
-	g_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n"));
+tstring s = ReadText(idEdit);
+if (s.empty()) return "匿名用户";
+return ToString(s);
 }
 
-// Empty name falls back to Anonymous to keep record format stable.
-static std::string ReadNameOrDefault(unsigned short idEdit)
+void AppendLog(LPCTSTR s)
 {
-	tstring s = ReadText(idEdit);
-	if (s.empty()) return "Anonymous";
-	return ToString(s);
+m_form.Control(ID_editLog, false).TextAdd(s);
+m_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n"));
 }
 
-static void AppendGrabResult(LPCTSTR packetName, const std::string& grabber, double money)
+void SetLogLine(LPCTSTR s)
 {
-	TCHAR line[256] = { 0 };
-	_stprintf_s(line, _countof(line), TEXT("%s - %s grabbed %.2f"),
-		packetName, ToTString(grabber).c_str(), money);
-	AppendLog(line);
+m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+AppendLog(s);
 }
 
-static void UpdateResultText(const std::string& grabber, double money)
+void UpdateResultText(const std::string& grabber, double money)
 {
-	TCHAR line[256] = { 0 };
-	_stprintf_s(line, _countof(line), TEXT("\x606D\x559C\xFF01%s \x62A2\x5230 %.2f \x5143\x7EA2\x5305\xFF01"),
-		ToTString(grabber).c_str(), money);
-	g_form.Control(ID_txtResult, false).TextSet(line);
+TCHAR line[256] = { 0 };
+_stprintf_s(line, _countof(line), TEXT("\x606D\x559C\xFF01%s \x62A2\x5230 %.2f \x5143\x7EA2\x5305\xFF01"), ToTString(grabber).c_str(), money);
+m_form.Control(ID_txtResult, false).TextSet(line);
 }
 
-static void UpdateLeftFooter(const RedPacket& packet)
+void UpdateLeftFooter(const RedPacket& packet, LPCTSTR packetLabel)
 {
-	TCHAR line[256] = { 0 };
-	_stprintf_s(line, _countof(line), TEXT("\x7EA2\x5305\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x7EA2\x5305"),
-		packet.grabbedCount(), packet.totalCount());
-	g_form.Control(ID_txtLeftStatic, false).TextSet(line);
+TCHAR line[256] = { 0 };
+_stprintf_s(line, _countof(line), TEXT("%s\xFF1A\x5DF2\x62A2 %d / %d \x4E2A"), packetLabel, packet.grabbedCount(), packet.totalCount());
+m_form.Control(ID_txtLeftStatic, false).TextSet(line);
 }
 
-// Print packet detail block into the common log area.
-static void AppendSummary(const RedPacket& packet, LPCTSTR title)
+bool ParseNameMoney(const std::string& src, std::string& outName, std::string& outMoney)
 {
-	AppendLog(TEXT("--------------------------------------------------"));
-	AppendLog(title);
-	tstring s = ToTString(packet.summary());
-	AppendLog(s.c_str());
+size_t pos = src.rfind(':');
+if (pos == std::string::npos) return false;
+outName = src.substr(0, pos);
+outMoney = src.substr(pos + 1);
+return true;
 }
 
-static void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetName, bool checkReady = false, bool showResultText = false)
+void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
 {
-	// Packet C requires a successful funding step before grab is allowed.
-	if (checkReady && !g_packetCReady)
-	{
-		AppendLog(TEXT("Packet C is not funded yet, cannot grab."));
-		return;
-	}
+// 中文注释：查看按钮改为“切换日志内容”，每次只展示当前红包的抢包明细。
+m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+AppendLog(TEXT("=================================================="));
+TCHAR title[128] = { 0 };
+_stprintf_s(title, _countof(title), TEXT("%s\x62A2\x5305\x8BB0\x5F55"), packetLabel);
+AppendLog(title);
+AppendLog(TEXT("--------------------------------------------------"));
 
-	std::string who = ReadNameOrDefault(idNameEdit);
-	double got = packet.grab(who);
-	if (got <= 0.0)
-	{
-		TCHAR line[128] = { 0 };
-		_stprintf_s(line, _countof(line), TEXT("%s is empty"), packetName);
-		AppendLog(line);
-		if (showResultText) g_form.Control(ID_txtResult, false).TextSet(TCN_GrabFailHint());
-		return;
-	}
-	AppendGrabResult(packetName, who, got);
-	if (showResultText) UpdateResultText(who, got);
+std::vector<std::string> list = packet.records();
+if (list.empty())
+{
+AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55\x3002"));
+}
+else
+{
+AppendLog(TEXT("\x7528\x6237\x5217\x8868\xFF1A"));
+for (size_t i = 0; i < list.size(); ++i)
+{
+std::string who;
+std::string money;
+if (!ParseNameMoney(list[i], who, money)) continue;
+TCHAR line[256] = { 0 };
+_stprintf_s(line, _countof(line), TEXT("%d. \x7528\x6237\xFF1A%s\xFF0C\x91D1\x989D\xFF1A%s \x5143"),
+static_cast<int>(i + 1), ToTString(who).c_str(), ToTString(money).c_str());
+AppendLog(line);
+}
 }
 
-static void OnFormLoad()
+std::string best = packet.bestLuckRecord();
+if (best.empty())
 {
-	// Keep window icon setup: required by assignment and runtime UX.
-	g_form.IconSet(IDI_ICON1);
-	g_form.TextSet(TCN_WindowTitle());
-	g_form.MoveToScreenCenter();
-	g_form.BackColorSet(RGB(236, 236, 236));
-	g_form.KeyPreview = true;
-
-	bool loadedCoverFromLocalBmp = false;
-	tstring coverPath;
-	if (TryBuildExeRelativeCoverPath(coverPath))
-	{
-		loadedCoverFromLocalBmp = TryLoadCoverFromPath(coverPath.c_str());
-	}
-	if (!loadedCoverFromLocalBmp)
-	{
-		loadedCoverFromLocalBmp = TryLoadCoverFromPath(kCoverBmpPath);
-	}
-	if (!loadedCoverFromLocalBmp)
-		g_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
-
-	// Runtime captions are applied here (resource text stays ASCII-safe).
-	LPCTSTR textGrab = TCN_Grab();
-	LPCTSTR textView = TCN_View();
-	g_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
-	g_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
-	g_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
-	g_form.Control(ID_btnAGrab, false).TextSet(textGrab);
-	g_form.Control(ID_btnAShow, false).TextSet(textView);
-	g_form.Control(ID_btnBGrab, false).TextSet(textGrab);
-	g_form.Control(ID_btnBShow, false).TextSet(textView);
-	g_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
-	g_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
-	g_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
-	g_form.Control(ID_btnCGrab, false).TextSet(textGrab);
-	g_form.Control(ID_btnCShow, false).TextSet(textView);
-	g_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
-	g_form.Control(ID_editLog, false).TextSet(TEXT(""));
-	g_form.Control(ID_txtSep, false).VisibleSet(false);
-
-	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
-	// Keep beginner-facing controls visible.
-	g_form.Control(ID_btnAGrab, false).VisibleSet(true);
-	g_form.Control(ID_btnAShow, false).VisibleSet(true);
-	g_form.Control(ID_editAName, false).VisibleSet(true);
-
-	g_form.Control(ID_editBName, false).TextSet(TEXT(""));
-	g_form.Control(ID_editBName, false).VisibleSet(true);
-	g_form.Control(ID_btnBGrab, false).VisibleSet(true);
-	g_form.Control(ID_btnBShow, false).VisibleSet(true);
-	g_form.Control(ID_txtResult, false).VisibleSet(true);
-
-	g_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
-	g_form.Control(ID_editCNum, false).TextSet(TEXT(""));
-	g_form.Control(ID_editCName, false).TextSet(TEXT(""));
-	g_form.Control(ID_txtCMoney, false).VisibleSet(true);
-	g_form.Control(ID_editCMoney, false).VisibleSet(true);
-	g_form.Control(ID_txtCNum, false).VisibleSet(true);
-	g_form.Control(ID_editCNum, false).VisibleSet(true);
-	g_form.Control(ID_btnCFill, false).VisibleSet(true);
-	g_form.Control(ID_editCName, false).VisibleSet(true);
-	g_form.Control(ID_btnCGrab, false).VisibleSet(true);
-	g_form.Control(ID_btnCShow, false).VisibleSet(true);
-	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
-
-	// Keep group boxes behind interactive controls to avoid covering children.
-	g_form.Control(ID_grpA, false).ZOrder(1);
-	g_form.Control(ID_grpB, false).ZOrder(1);
-	g_form.Control(ID_grpC, false).ZOrder(1);
-	g_form.Control(ID_editAName, false).ZOrder(0);
-	g_form.Control(ID_btnAGrab, false).ZOrder(0);
-	g_form.Control(ID_btnAShow, false).ZOrder(0);
-	g_form.Control(ID_editBName, false).ZOrder(0);
-	g_form.Control(ID_btnBGrab, false).ZOrder(0);
-	g_form.Control(ID_btnBShow, false).ZOrder(0);
-	g_form.Control(ID_txtResult, false).ZOrder(0);
-	g_form.Control(ID_txtCMoney, false).ZOrder(0);
-	g_form.Control(ID_editCMoney, false).ZOrder(0);
-	g_form.Control(ID_txtCNum, false).ZOrder(0);
-	g_form.Control(ID_editCNum, false).ZOrder(0);
-	g_form.Control(ID_btnCFill, false).ZOrder(0);
-	g_form.Control(ID_editCName, false).ZOrder(0);
-	g_form.Control(ID_btnCGrab, false).ZOrder(0);
-	g_form.Control(ID_btnCShow, false).ZOrder(0);
-
-	if (!loadedCoverFromLocalBmp)
-	{
-		AppendLog(TEXT("Local BMP not found, using embedded cover image."));
-	}
-	AppendLog(TEXT("Red packet simulator started."));
-	UpdateLeftFooter(g_packetA);
+AppendLog(TEXT("\x624B\x6C14\x6700\x4F73\xFF1A\x6682\x65E0"));
+}
+else
+{
+std::string who;
+std::string money;
+if (ParseNameMoney(best, who, money))
+{
+TCHAR line[256] = { 0 };
+_stprintf_s(line, _countof(line), TEXT("\x624B\x6C14\x6700\x4F73\xFF1A%s\xFF0C%s \x5143"), ToTString(who).c_str(), ToTString(money).c_str());
+AppendLog(line);
+}
 }
 
-static void OnAGrab()
-{
-	DoGrab(g_packetA, ID_editAName, TEXT("Packet A"));
-	UpdateLeftFooter(g_packetA);
+TCHAR progress[128] = { 0 };
+_stprintf_s(progress, _countof(progress), TEXT("\x8FDB\x5EA6\xFF1A\x5DF2\x62A2 %d / %d \x4E2A\x3002"), packet.grabbedCount(), packet.totalCount());
+AppendLog(progress);
+UpdateLeftFooter(packet, packetLabel);
 }
 
-static void OnAShow()
+bool TryRobotGrabPacket(RedPacket& packet, LPCTSTR packetLabel, bool checkReady, bool showResultText)
 {
-	AppendSummary(g_packetA, TEXT("Packet A summary"));
+if (checkReady && !m_packetCReady) return false;
+if (packet.grabbedCount() >= packet.totalCount()) return false;
+
+TCHAR robotName[64] = { 0 };
+_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
+DoGrabWithName(packet, ToString(robotName), packetLabel, showResultText);
+return true;
 }
 
-static void OnBGrab()
+void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetLabel, bool checkReady, bool showResultText)
 {
-	DoGrab(g_packetB, ID_editBName, TEXT("Packet B"), false, true);
+if (checkReady && !m_packetCReady)
+{
+MsgBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"), TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+return;
+}
+std::string who = ReadNameOrDefault(idNameEdit);
+DoGrabWithName(packet, who, packetLabel, showResultText);
 }
 
-static void OnBShow()
+void DoGrabWithName(RedPacket& packet, const std::string& who, LPCTSTR packetLabel, bool showResultText)
 {
-	AppendSummary(g_packetB, TEXT("Packet B summary"));
+int status = RedPacket::GrabEmpty;
+double got = packet.grab(who, &status);
+if (status == RedPacket::GrabDuplicate)
+{
+TCHAR msg[256] = { 0 };
+_stprintf_s(msg, _countof(msg), TEXT("%s \x5DF2\x7ECF\x62A2\x8FC7%s\xFF0C\x6BCF\x4E2A\x7528\x6237\x53EA\x80FD\x62A2\x4E00\x6B21\x3002"), ToTString(who).c_str(), packetLabel);
+MsgBox(msg, TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+return;
+}
+if (got <= 0.0)
+{
+TCHAR msg[256] = { 0 };
+_stprintf_s(msg, _countof(msg), TEXT("%s\x5DF2\x62A2\x5B8C\xFF0C\x624B\x6162\x4E86\xFF01"), packetLabel);
+MsgBox(msg, TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002"));
+return;
 }
 
-static void OnCFill()
-{
-	// Read custom amount + count from C group input boxes.
-	double money = g_form.Control(ID_editCMoney, false).TextVal();
-	int count = static_cast<int>(g_form.Control(ID_editCNum, false).TextVal());
-	if (money <= 0.0 || count <= 0)
-	{
-		AppendLog(TEXT("Funding failed: money and count must both be positive."));
-		return;
-	}
-	if (!g_packetC.canSetMoney())
-	{
-		AppendLog(TEXT("Packet C has already been grabbed and cannot be funded again."));
-		return;
-	}
-
-	g_packetC.setMoney(money, count);
-	g_packetCReady = true;
-	// After funding succeeds, enable C-Grab button.
-	g_form.Control(ID_btnCGrab, false).EnabledSet(true);
-	AppendLog(TEXT("Packet C funded successfully. You can now start grabbing."));
+TCHAR msg[256] = { 0 };
+_stprintf_s(msg, _countof(msg), TEXT("\x606D\x559C\xFF01%s \x5728%s\x62A2\x5230 %.2f \x5143\x3002"), ToTString(who).c_str(), packetLabel, got);
+MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
+if (showResultText) UpdateResultText(who, got);
+ShowPacketLog(packet, packetLabel);
 }
+};
 
-static void OnCGrab()
-{
-	DoGrab(g_packetC, ID_editCName, TEXT("Packet C"), true);
-}
+RedPacketApp g_app;
 
-static void OnCShow()
-{
-	AppendSummary(g_packetC, TEXT("Packet C summary"));
-}
+void AppOnFormLoad() { g_app.OnFormLoad(); }
+void AppOnAGrab() { g_app.OnAGrab(); }
+void AppOnAShow() { g_app.OnAShow(); }
+void AppOnBGrab() { g_app.OnBGrab(); }
+void AppOnBShow() { g_app.OnBShow(); }
+void AppOnCFill() { g_app.OnCFill(); }
+void AppOnCGrab() { g_app.OnCGrab(); }
+void AppOnCShow() { g_app.OnCShow(); }
+void AppOnRobotGrab() { g_app.OnRobotGrab(); }
 
 int main()
 {
-	g_form.EventAdd(0, eForm_Load, OnFormLoad);
-	// Clicking the cover image can also trigger Packet A grab.
-	g_form.EventAdd(ID_picCover, eStatic_Click, OnAGrab);
-	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
-	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
-	g_form.EventAdd(ID_btnBGrab, eCommandButton_Click, OnBGrab);
-	g_form.EventAdd(ID_btnBShow, eCommandButton_Click, OnBShow);
-	g_form.EventAdd(ID_btnCFill, eCommandButton_Click, OnCFill);
-	g_form.EventAdd(ID_btnCGrab, eCommandButton_Click, OnCGrab);
-	g_form.EventAdd(ID_btnCShow, eCommandButton_Click, OnCShow);
+g_app.Form().EventAdd(0, eForm_Load, AppOnFormLoad);
+g_app.Form().EventAdd(ID_picCover, eStatic_Click, AppOnAGrab);
+g_app.Form().EventAdd(ID_btnAGrab, eCommandButton_Click, AppOnAGrab);
+g_app.Form().EventAdd(ID_btnAShow, eCommandButton_Click, AppOnAShow);
+g_app.Form().EventAdd(ID_btnBGrab, eCommandButton_Click, AppOnBGrab);
+g_app.Form().EventAdd(ID_btnBShow, eCommandButton_Click, AppOnBShow);
+g_app.Form().EventAdd(ID_btnCFill, eCommandButton_Click, AppOnCFill);
+g_app.Form().EventAdd(ID_btnCGrab, eCommandButton_Click, AppOnCGrab);
+g_app.Form().EventAdd(ID_btnCShow, eCommandButton_Click, AppOnCShow);
+g_app.Form().EventAdd(ID_btnRobotGrab, eCommandButton_Click, AppOnRobotGrab);
 
-	g_form.Show();
-	return 0;
+g_app.Form().Show();
+return 0;
 }
