@@ -246,16 +246,28 @@ static void OnFormLoad()
 	g_form.Control(ID_txtSep, false).VisibleSet(false);
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
-	// Keep Packet A edit/button controls visible.
+	// Keep beginner-facing controls visible.
 	g_form.Control(ID_btnAGrab, false).VisibleSet(true);
 	g_form.Control(ID_btnAShow, false).VisibleSet(true);
 	g_form.Control(ID_editAName, false).VisibleSet(true);
 
 	g_form.Control(ID_editBName, false).TextSet(TEXT(""));
+	g_form.Control(ID_editBName, false).VisibleSet(true);
+	g_form.Control(ID_btnBGrab, false).VisibleSet(true);
+	g_form.Control(ID_btnBShow, false).VisibleSet(true);
+	g_form.Control(ID_txtResult, false).VisibleSet(true);
 
 	g_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
 	g_form.Control(ID_editCNum, false).TextSet(TEXT(""));
 	g_form.Control(ID_editCName, false).TextSet(TEXT(""));
+	g_form.Control(ID_txtCMoney, false).VisibleSet(true);
+	g_form.Control(ID_editCMoney, false).VisibleSet(true);
+	g_form.Control(ID_txtCNum, false).VisibleSet(true);
+	g_form.Control(ID_editCNum, false).VisibleSet(true);
+	g_form.Control(ID_btnCFill, false).VisibleSet(true);
+	g_form.Control(ID_editCName, false).VisibleSet(true);
+	g_form.Control(ID_btnCGrab, false).VisibleSet(true);
+	g_form.Control(ID_btnCShow, false).VisibleSet(true);
 	g_form.Control(ID_btnCGrab, false).EnabledSet(false);
 
 	if (!loadedCoverFromLocalBmp)
@@ -323,7 +335,7 @@ static void OnCShow()
 int main()
 {
 	g_form.EventAdd(0, eForm_Load, OnFormLoad);
-	// Packet A edit/button controls are hidden at runtime, so cover click triggers Packet A grab.
+	// Clicking the cover image can also trigger Packet A grab.
 	g_form.EventAdd(ID_picCover, eStatic_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAGrab, eCommandButton_Click, OnAGrab);
 	g_form.EventAdd(ID_btnAShow, eCommandButton_Click, OnAShow);
