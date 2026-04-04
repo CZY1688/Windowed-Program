@@ -121,9 +121,10 @@ RedPacket m_packetC;
 bool m_packetCReady;
 int m_robotIndex;
 
-LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305" "A"); }
-LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305" "B"); }
-LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305" "C"); }
+// Split literals to avoid \x... consuming following hex-like chars in old compilers.
+LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305" "A"); } // 红包A
+LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305" "B"); } // 红包B
+LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305" "C"); } // 红包C
 
 int ShowInfoBox(LPCTSTR msg)
 {

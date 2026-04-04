@@ -9,6 +9,11 @@
 #include <cstdlib>
 #include <cerrno>
 
+namespace
+{
+const char* kDefaultGrabberName = "AnonymousUser";
+}
+
 double RedPacket::Round2(double value) const
 {
 	if (value >= 0.0) return static_cast<double>(static_cast<int>(value * 100.0 + 0.5)) / 100.0;
@@ -63,7 +68,7 @@ bool RedPacket::HasGrabbed(const std::string& grabberName) const
 
 double RedPacket::grab(std::string grabberName, int* outStatus)
 {
-	if (grabberName.empty()) grabberName = "AnonymousUser";
+	if (grabberName.empty()) grabberName = kDefaultGrabberName;
 	if (HasGrabbed(grabberName))
 	{
 		if (outStatus) *outStatus = GrabDuplicate;
