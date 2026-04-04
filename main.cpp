@@ -124,19 +124,19 @@ RedPacket m_packetC;
 bool m_packetCReady;
 int m_robotIndex;
 
-	LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305A"); }
-	LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305B"); }
-	LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305C"); }
+LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305A"); }
+LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305B"); }
+LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305C"); }
 
-	int ShowInfoBox(LPCTSTR msg) const
-	{
-		return MessageBox(0, msg, TCN_TitleInfo(), MB_OK | MB_ICONINFORMATION);
-	}
+int ShowInfoBox(LPCTSTR msg)
+{
+	return MessageBox(m_form.hWnd(), msg, TCN_TitleInfo(), MB_OK | MB_ICONINFORMATION);
+}
 
-	int ShowWarnBox(LPCTSTR msg) const
-	{
-		return MessageBox(0, msg, TCN_TitleWarn(), MB_OK | MB_ICONWARNING);
-	}
+int ShowWarnBox(LPCTSTR msg)
+{
+	return MessageBox(m_form.hWnd(), msg, TCN_TitleWarn(), MB_OK | MB_ICONWARNING);
+}
 
 void ApplyRuntimeTexts()
 {
