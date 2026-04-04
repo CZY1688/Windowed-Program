@@ -246,10 +246,10 @@ static void OnFormLoad()
 	g_form.Control(ID_txtSep, false).VisibleSet(false);
 
 	g_form.Control(ID_editAName, false).TextSet(TEXT(""));
-	// Packet A UI controls are hidden in runtime; cover click is the trigger.
-	g_form.Control(ID_btnAGrab, false).VisibleSet(false);
-	g_form.Control(ID_btnAShow, false).VisibleSet(false);
-	g_form.Control(ID_editAName, false).VisibleSet(false);
+	// Keep Packet A edit/button controls visible.
+	g_form.Control(ID_btnAGrab, false).VisibleSet(true);
+	g_form.Control(ID_btnAShow, false).VisibleSet(true);
+	g_form.Control(ID_editAName, false).VisibleSet(true);
 
 	g_form.Control(ID_editBName, false).TextSet(TEXT(""));
 
