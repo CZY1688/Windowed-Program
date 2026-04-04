@@ -77,9 +77,9 @@ void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); 
 void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
 void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
 
-void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); ShowViewMsg(m_packetA, PacketLabelA()); }
-void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); ShowViewMsg(m_packetB, PacketLabelB()); }
-void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); ShowViewMsg(m_packetC, PacketLabelC()); }
+void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); ShowViewMsg(m_packetA, PacketLabelA()); ShowBestLuckMsg(m_packetA, PacketLabelA()); }
+void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); ShowViewMsg(m_packetB, PacketLabelB()); ShowBestLuckMsg(m_packetB, PacketLabelB()); }
+void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); ShowViewMsg(m_packetC, PacketLabelC()); ShowBestLuckMsg(m_packetC, PacketLabelC()); }
 
 void OnCFill()
 {
@@ -105,6 +105,7 @@ TCHAR msg[128] = { 0 };
 _stprintf_s(msg, _countof(msg), TEXT("\x585E\x94B1\x6210\x529F\xFF01\x5DF2\x8BBE\x7F6E %.2f \x5143\xFF0C\x5171 %d \x4E2A\x7EA2\x5305\x3002"), money, count);
 MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
 ShowPacketLog(m_packetC, PacketLabelC());
+ShowBestLuckMsg(m_packetC, PacketLabelC());
 }
 
 void OnRobotGrab()
@@ -274,6 +275,32 @@ _stprintf_s(msg, _countof(msg), TEXT("%s\x67E5\x770B\x5B8C\x6210\xFF1A\x5DF2\x62
 MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
 }
 
+void ShowBestLuckMsg(const RedPacket& packet, LPCTSTR packetLabel)
+{
+std::string best = packet.bestLuckRecord();
+TCHAR msg[256] = { 0 };
+if (best.empty())
+{
+	_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A\x6682\x65E0\x3002"), packetLabel);
+}
+else
+{
+	std::string who;
+	std::string money;
+	if (ParseNameMoney(best, who, money))
+	{
+		_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A%s\xFF0C%s \x5143\x3002"),
+			packetLabel, ToTString(who).c_str(), ToTString(money).c_str());
+	}
+	else
+	{
+		_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A%s\x3002"),
+			packetLabel, ToTString(best).c_str());
+	}
+}
+MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
+}
+
 void AppendLog(LPCTSTR s)
 {
 m_form.Control(ID_editLog, false).TextAdd(s);
@@ -397,6 +424,7 @@ if (status == RedPacket::GrabDuplicate)
 TCHAR msg[256] = { 0 };
 _stprintf_s(msg, _countof(msg), TEXT("%s \x5DF2\x7ECF\x62A2\x8FC7%s\xFF0C\x6BCF\x4E2A\x7528\x6237\x53EA\x80FD\x62A2\x4E00\x6B21\x3002"), ToTString(who).c_str(), packetLabel);
 MsgBox(msg, TCN_TitleWarn(), mb_OK, mb_IconExclamation);
+ShowBestLuckMsg(packet, packetLabel);
 return;
 }
 if (got <= 0.0)
@@ -405,6 +433,7 @@ TCHAR msg[256] = { 0 };
 _stprintf_s(msg, _countof(msg), TEXT("%s\x5DF2\x62A2\x5B8C\xFF0C\x624B\x6162\x4E86\xFF01"), packetLabel);
 MsgBox(msg, TCN_TitleWarn(), mb_OK, mb_IconExclamation);
 if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002"));
+ShowBestLuckMsg(packet, packetLabel);
 return;
 }
 
@@ -413,6 +442,7 @@ _stprintf_s(msg, _countof(msg), TEXT("\x606D\x559C\xFF01%s \x5728%s\x62A2\x5230 
 MsgBox(msg, TCN_TitleInfo(), mb_OK, mb_IconInformation);
 if (showResultText) UpdateResultText(who, got);
 ShowPacketLog(packet, packetLabel);
+ShowBestLuckMsg(packet, packetLabel);
 }
 };
 
