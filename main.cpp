@@ -26,20 +26,20 @@ return m_form;
 }
 
 // All TCN_* methods below are UI text constants via \x escapes for legacy toolchain compatibility.
-LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); } // 模拟微信抢红包
-LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包A（钱已塞好，直接开抢）
-LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包B（钱已塞好，直接开抢）
-LPCTSTR TCN_GroupC() const { return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09"); } // 红包C（先塞钱，才能抢）
-LPCTSTR TCN_Grab() const { return TEXT("\x62A2\x7EA2\x5305"); } // 抢红包
-LPCTSTR TCN_View() const { return TEXT("\x67E5\x770B"); } // 查看
-LPCTSTR TCN_RobotGrab() const { return TEXT("\x673A\x5668\x4EBA\x62A2\x7EA2\x5305"); } // 机器人抢红包
-LPCTSTR TCN_CMoney() const { return TEXT("\x94B1\x6570(\x5143)\xFF1A"); } // 钱数(元)：
-LPCTSTR TCN_CNum() const { return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A"); } // 分几个红包：
-LPCTSTR TCN_CFill() const { return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305"); } // 塞钱进红包
+LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
+LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
+LPCTSTR TCN_GroupC() const { return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09"); }
+LPCTSTR TCN_Grab() const { return TEXT("\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_View() const { return TEXT("\x67E5\x770B"); }
+LPCTSTR TCN_RobotGrab() const { return TEXT("\x673A\x5668\x4EBA\x62A2\x7EA2\x5305"); }
+LPCTSTR TCN_CMoney() const { return TEXT("\x94B1\x6570(\x5143)\xFF1A"); }
+LPCTSTR TCN_CNum() const { return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A"); }
+LPCTSTR TCN_CFill() const { return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305"); }
 LPCTSTR TCN_ResultDefault() const { return TEXT(""); }
 LPCTSTR TCN_TitleInfo() const { return TEXT("\x63D0\x793A"); }
 LPCTSTR TCN_TitleWarn() const { return TEXT("\x8B66\x544A"); }
-LPCTSTR TCN_AnonymousUser() const { return TEXT("\x533F\x540D\x7528\x6237"); } // 匿名用户
+LPCTSTR TCN_AnonymousUser() const { return TEXT("\x533F\x540D\x7528\x6237"); }
 
 void OnFormLoad()
 {
