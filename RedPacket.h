@@ -7,11 +7,19 @@
 class RedPacket
 {
 public:
+	enum EGrabStatus
+	{
+		GrabSuccess = 1,
+		GrabEmpty = 0,
+		GrabDuplicate = -1
+	};
+
 	RedPacket(double money = 0.0, int packetNum = 1, std::string owner = "Unknown");
 	~RedPacket();
 
 	void setMoney(double money, int packetNum);
 	double grab(std::string grabberName);
+	double grab(std::string grabberName, int* outStatus);
 	void show() const;
 
 	std::string summary() const;
@@ -19,6 +27,7 @@ public:
 	bool canSetMoney() const;
 	int grabbedCount() const;
 	int totalCount() const;
+	std::string bestLuckRecord() const;
 
 private:
 	double total_money;
@@ -26,8 +35,10 @@ private:
 	int grabbed;
 	std::string name;
 	std::string* arr;
+	std::vector<std::string> grabbed_names;
 
-	static double Round2(double value);
+	double Round2(double value) const;
+	bool HasGrabbed(const std::string& grabberName) const;
 };
 
 #endif

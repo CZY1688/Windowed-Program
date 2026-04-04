@@ -6,8 +6,9 @@
 #include <iomanip>
 #include <random>
 #include <sstream>
+#include <cstdlib>
 
-double RedPacket::Round2(double value)
+double RedPacket::Round2(double value) const
 {
 	if (value >= 0.0) return static_cast<double>(static_cast<int>(value * 100.0 + 0.5)) / 100.0;
 	return static_cast<double>(static_cast<int>(value * 100.0 - 0.5)) / 100.0;
@@ -42,12 +43,36 @@ void RedPacket::setMoney(double money, int packetNum)
 	delete[] arr;
 	arr = new std::string[num];
 	for (int i = 0; i < num; ++i) arr[i].clear();
+	grabbed_names.clear();
 }
 
 double RedPacket::grab(std::string grabberName)
 {
+	return grab(grabberName, 0);
+}
+
+bool RedPacket::HasGrabbed(const std::string& grabberName) const
+{
+	for (size_t i = 0; i < grabbed_names.size(); ++i)
+	{
+		if (grabbed_names[i] == grabberName) return true;
+	}
+	return false;
+}
+
+double RedPacket::grab(std::string grabberName, int* outStatus)
+{
 	if (grabberName.empty()) grabberName = "Anonymous";
-	if (grabbed >= num) return 0.0;
+	if (HasGrabbed(grabberName))
+	{
+		if (outStatus) *outStatus = GrabDuplicate;
+		return 0.0;
+	}
+	if (grabbed >= num)
+	{
+		if (outStatus) *outStatus = GrabEmpty;
+		return 0.0;
+	}
 
 	double got = 0.0;
 	int remainCount = num - grabbed;
@@ -82,7 +107,9 @@ double RedPacket::grab(std::string grabberName)
 	std::ostringstream oss;
 	oss << std::fixed << std::setprecision(2) << got;
 	arr[grabbed] = grabberName + ":" + oss.str();
+	grabbed_names.push_back(grabberName);
 	++grabbed;
+	if (outStatus) *outStatus = GrabSuccess;
 	return got;
 }
 
@@ -95,14 +122,16 @@ void RedPacket::show() const
 std::string RedPacket::summary() const
 {
 	std::ostringstream oss;
-	oss << "Owner: " << name << "\n";
-	oss << "Remaining: " << std::fixed << std::setprecision(2) << total_money << "\n";
-	oss << "Total count: " << num << "\n";
-	oss << "Grabbed count: " << grabbed << "\n";
+	oss << "发红包者: " << name << "\n";
+	oss << "剩余金额: " << std::fixed << std::setprecision(2) << total_money << " 元\n";
+	oss << "红包总数: " << num << "\n";
+	oss << "已抢数量: " << grabbed << "\n";
 	for (int i = 0; i < grabbed; ++i)
 	{
-		oss << "  " << i + 1 << ". " << arr[i] << "\n";
+		oss << "  " << i + 1 << ". " << arr[i] << " 元\n";
 	}
+	std::string best = bestLuckRecord();
+	if (!best.empty()) oss << "手气最佳: " << best << " 元\n";
 	return oss.str();
 }
 
@@ -126,4 +155,27 @@ int RedPacket::grabbedCount() const
 int RedPacket::totalCount() const
 {
 	return num;
+}
+
+std::string RedPacket::bestLuckRecord() const
+{
+	double bestMoney = -1.0;
+	std::string bestName;
+	for (int i = 0; i < grabbed; ++i)
+	{
+		size_t pos = arr[i].find(':');
+		if (pos == std::string::npos) continue;
+		std::string who = arr[i].substr(0, pos);
+		std::string moneyText = arr[i].substr(pos + 1);
+		double money = std::atof(moneyText.c_str());
+		if (money > bestMoney)
+		{
+			bestMoney = money;
+			bestName = who;
+		}
+	}
+	if (bestMoney < 0.0 || bestName.empty()) return std::string();
+	std::ostringstream oss;
+	oss << bestName << ":" << std::fixed << std::setprecision(2) << bestMoney;
+	return oss.str();
 }
