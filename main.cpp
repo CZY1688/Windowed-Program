@@ -77,9 +77,9 @@ void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); 
 void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
 void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
 
-void OnAShow() { ShowPacketLog(m_packetA, PacketLabelA()); ShowViewMsg(m_packetA, PacketLabelA()); ShowBestLuckMsg(m_packetA, PacketLabelA()); }
-void OnBShow() { ShowPacketLog(m_packetB, PacketLabelB()); ShowViewMsg(m_packetB, PacketLabelB()); ShowBestLuckMsg(m_packetB, PacketLabelB()); }
-void OnCShow() { ShowPacketLog(m_packetC, PacketLabelC()); ShowViewMsg(m_packetC, PacketLabelC()); ShowBestLuckMsg(m_packetC, PacketLabelC()); }
+void OnAShow() { LPCTSTR label = PacketLabelA(); ShowPacketLog(m_packetA, label); ShowViewMsg(m_packetA, label); ShowBestLuckMsg(m_packetA, label); }
+void OnBShow() { LPCTSTR label = PacketLabelB(); ShowPacketLog(m_packetB, label); ShowViewMsg(m_packetB, label); ShowBestLuckMsg(m_packetB, label); }
+void OnCShow() { LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label); ShowViewMsg(m_packetC, label); ShowBestLuckMsg(m_packetC, label); }
 
 void OnCFill()
 {
