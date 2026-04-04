@@ -5,6 +5,8 @@
 #include <tchar.h>
 #include <vector>
 
+#define PACKET_LABEL_PREFIX TEXT("\x7EA2\x5305")
+
 class RedPacketApp
 {
 public:
@@ -23,7 +25,7 @@ CBForm& Form()
 return m_form;
 }
 
-// 中文界面常量（使用 \x 转义，兼容旧工具链编码）
+// All TCN_* methods below are UI text constants via \x escapes for legacy toolchain compatibility.
 LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); } // 模拟微信抢红包
 LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包A（钱已塞好，直接开抢）
 LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); } // 红包B（钱已塞好，直接开抢）
@@ -78,7 +80,7 @@ void OnCShow() { LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label)
 
 void OnCFill()
 {
-// 中文注释：红包 C 必须先塞钱成功，才能允许用户点击“抢红包”。
+// Packet C must be filled before grab is enabled.
 double money = m_form.Control(ID_editCMoney, false).TextVal();
 int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
 	if (money <= 0.0 || count <= 0)
@@ -106,7 +108,7 @@ ShowPacketLog(m_packetC, PacketLabelC());
 
 void OnRobotGrab()
 {
-// 中文注释：机器人按 A->B->C 优先级抢可用红包，便于老师演示自动抢包功能。
+// Robot grabs available packets in A->B->C priority.
 if (TryRobotGrabPacket(m_packetA, PacketLabelA(), false, false)) return;
 if (TryRobotGrabPacket(m_packetB, PacketLabelB(), false, true)) return;
 if (TryRobotGrabPacket(m_packetC, PacketLabelC(), true, false)) return;
@@ -121,9 +123,10 @@ RedPacket m_packetC;
 bool m_packetCReady;
 int m_robotIndex;
 
-LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305A"); }
-LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305B"); }
-LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305C"); }
+// Split literals to avoid \x... consuming following hex-like chars in old compilers.
+LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // Red Packet A
+LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // Red Packet B
+LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // Red Packet C
 
 int ShowInfoBox(LPCTSTR msg)
 {
@@ -340,7 +343,7 @@ return true;
 
 void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
 {
-// 中文注释：查看/抢包后覆盖刷新日志，只显示中文明细，不显示英文报告式摘要。
+// Refresh log with current packet details after view/grab.
 m_form.Control(ID_editLog, false).TextSet(TEXT(""));
 	std::vector<std::string> recs = packet.records();
 	std::string best = packet.bestLuckRecord();

@@ -9,6 +9,12 @@
 #include <cstdlib>
 #include <cerrno>
 
+// File-local defaults to keep implementation details private.
+namespace
+{
+constexpr const char* DEFAULT_GRABBER_NAME = "AnonymousUser";
+}
+
 double RedPacket::Round2(double value) const
 {
 	if (value >= 0.0) return static_cast<double>(static_cast<int>(value * 100.0 + 0.5)) / 100.0;
@@ -63,7 +69,7 @@ bool RedPacket::HasGrabbed(const std::string& grabberName) const
 
 double RedPacket::grab(std::string grabberName, int* outStatus)
 {
-	if (grabberName.empty()) grabberName = "匿名用户";
+	if (grabberName.empty()) grabberName = DEFAULT_GRABBER_NAME;
 	if (HasGrabbed(grabberName))
 	{
 		if (outStatus) *outStatus = GrabDuplicate;
@@ -123,16 +129,16 @@ void RedPacket::show() const
 std::string RedPacket::summary() const
 {
 	std::ostringstream oss;
-	oss << "发红包者: " << name << "\n";
-	oss << "剩余金额: " << std::fixed << std::setprecision(2) << total_money << " 元\n";
-	oss << "红包总数: " << num << "\n";
-	oss << "已抢数量: " << grabbed << "\n";
+	oss << "Owner: " << name << "\n";
+	oss << "Money left: " << std::fixed << std::setprecision(2) << total_money << " yuan\n";
+	oss << "Total packets: " << num << "\n";
+	oss << "Grabbed count: " << grabbed << "\n";
 	for (int i = 0; i < grabbed; ++i)
 	{
-		oss << "  " << i + 1 << ". " << arr[i] << " 元\n";
+		oss << "  " << i + 1 << ". " << arr[i] << " yuan\n";
 	}
 	std::string best = bestLuckRecord();
-	if (!best.empty()) oss << "手气最佳: " << best << " 元\n";
+	if (!best.empty()) oss << "Best luck: " << best << " yuan\n";
 	return oss.str();
 }
 
