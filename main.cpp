@@ -5,6 +5,8 @@
 #include <tchar.h>
 #include <vector>
 
+#define PACKET_LABEL_PREFIX TEXT("\x7EA2\x5305")
+
 class RedPacketApp
 {
 public:
@@ -122,9 +124,9 @@ bool m_packetCReady;
 int m_robotIndex;
 
 // Split literals to avoid \x... consuming following hex-like chars in old compilers.
-LPCTSTR PacketLabelA() const { return TEXT("\x7EA2\x5305" "A"); } // 红包A
-LPCTSTR PacketLabelB() const { return TEXT("\x7EA2\x5305" "B"); } // 红包B
-LPCTSTR PacketLabelC() const { return TEXT("\x7EA2\x5305" "C"); } // 红包C
+LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // 红包A
+LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // 红包B
+LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // 红包C
 
 int ShowInfoBox(LPCTSTR msg)
 {

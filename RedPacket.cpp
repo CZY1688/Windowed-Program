@@ -11,7 +11,7 @@
 
 namespace
 {
-const char* kDefaultGrabberName = "AnonymousUser";
+constexpr const char* DEFAULT_GRABBER_NAME = "AnonymousUser";
 }
 
 double RedPacket::Round2(double value) const
@@ -68,7 +68,7 @@ bool RedPacket::HasGrabbed(const std::string& grabberName) const
 
 double RedPacket::grab(std::string grabberName, int* outStatus)
 {
-	if (grabberName.empty()) grabberName = kDefaultGrabberName;
+	if (grabberName.empty()) grabberName = DEFAULT_GRABBER_NAME;
 	if (HasGrabbed(grabberName))
 	{
 		if (outStatus) *outStatus = GrabDuplicate;
