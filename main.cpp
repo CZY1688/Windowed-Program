@@ -117,9 +117,7 @@ ShowPacketLog(m_packetC, PacketLabelC());
 void OnRobotGrab()
 {
 // Robot only grabs the packet currently being viewed.
-TCHAR robotName[64] = { 0 };
-_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
-DoGrabCurrentWithName(ToString(robotName));
+DoGrabCurrentWithName(NextRobotName());
 }
 
 void OnCoverClickGrabCurrent()
@@ -140,6 +138,13 @@ int m_robotIndex;
 LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // Red Packet A
 LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // Red Packet B
 LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // Red Packet C
+
+std::string NextRobotName()
+{
+TCHAR robotName[64] = { 0 };
+_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
+return ToString(tstring(robotName));
+}
 
 int ShowInfoBox(LPCTSTR msg)
 {
@@ -385,17 +390,6 @@ m_form.Control(ID_editLog, false).TextSet(TEXT(""));
 	}
 	if (recs.empty()) AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55"));
 	UpdateLeftFooter(packet, packetLabel);
-}
-
-bool TryRobotGrabPacket(RedPacket& packet, LPCTSTR packetLabel, bool checkReady, bool showResultText)
-{
-if (checkReady && !m_packetCReady) return false;
-if (packet.grabbedCount() >= packet.totalCount()) return false;
-
-TCHAR robotName[64] = { 0 };
-_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
-DoGrabWithName(packet, ToString(robotName), packetLabel, showResultText);
-return true;
 }
 
 void DoGrabCurrentFromInput()
