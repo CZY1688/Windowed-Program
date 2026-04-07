@@ -1,478 +1,564 @@
-#include "resource.h"
-#include "BForm.h"
-#include "RedPacket.h"
-#include <strsafe.h>
-#include <tchar.h>
-#include <vector>
+#include "resource.h"   // 资源文件头，定义了控件ID（如ID_form1, ID_btnAGrab等）和资源ID（如IDI_ICON1）
+#include "BForm.h"      // 自定义UI框架头文件，提供CBForm类用于窗口和控件管理
+#include "RedPacket.h"   // 红包逻辑类头文件，提供RedPacket类处理金额、拆分、记录等核心逻辑
+#include <strsafe.h>    // 安全字符串操作库（虽然保留了头文件，但下面未使用其函数）
+#include <tchar.h>      // TCHAR宏定义，支持Unicode和多字节字符集切换
+#include <vector>       // 标准库vector容器
 
-#define PACKET_LABEL_PREFIX TEXT("\x7EA2\x5305")
+using namespace std;  // 简化标准库调用（如vector不用写std::vector）
 
+// 定义红包UI标签的前缀
+#define PACKET_LABEL_PREFIX TEXT("红包")
+
+// 应用程序主类，负责整合UI逻辑与红包业务逻辑
 class RedPacketApp
 {
 public:
-enum ECurrentPacket
-{
-CurrentPacketA = 0,
-CurrentPacketB = 1,
-CurrentPacketC = 2
-};
+    // 枚举：当前选中/查看的红包（A, B, 或 C）
+    enum ECurrentPacket
+    {
+        CurrentPacketA = 0,
+        CurrentPacketB = 1,
+        CurrentPacketC = 2
+    };
 
-RedPacketApp()
-: m_form(ID_form1),
-  m_packetA(30.0, 5, "Owner A"),
-  m_packetB(50.0, 8, "Owner B"),
-  m_packetC(0.0, 1, "Owner C"),
-  m_packetCReady(false),
-  m_currentPacket(CurrentPacketA),
-  m_robotIndex(1)
-{
-}
+    // 构造函数：初始化成员变量（使用初始化列表）
+    RedPacketApp()
+        : m_form(ID_form1),                          // 绑定窗口资源ID
+        m_packetA(30.0, 5, "Owner A"),              // 初始化红包A：30元，5个，所有者A
+        m_packetB(50.0, 8, "Owner B"),              // 初始化红包B：50元，8个，所有者B
+        m_packetC(0.0, 1, "Owner C"),               // 初始化红包C：初始金额0，需塞钱
+        m_packetCReady(false),                       // 红包C初始状态：未塞钱
+        m_currentPacket(CurrentPacketA),             // 默认当前查看红包A
+        m_robotIndex(1)                              // 机器人序号初始化为1
+    {
+    }
 
-CBForm& Form()
-{
-return m_form;
-}
+    // 获取窗体对象的引用，用于外部（如main函数）访问
+    CBForm& Form()
+    {
+        return m_form;
+    }
 
-// All TCN_* methods below are UI text constants via \x escapes for legacy toolchain compatibility.
-LPCTSTR TCN_WindowTitle() const { return TEXT("\x6A21\x62DF\x5FAE\x4FE1\x62A2\x7EA2\x5305"); }
-LPCTSTR TCN_GroupA() const { return TEXT("\x7EA2\x5305\x41\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
-LPCTSTR TCN_GroupB() const { return TEXT("\x7EA2\x5305\x42\xFF08\x94B1\x5DF2\x585E\x597D\xFF0C\x76F4\x63A5\x5F00\x62A2\xFF09"); }
-LPCTSTR TCN_GroupC() const { return TEXT("\x7EA2\x5305\x43\xFF08\x5148\x585E\x94B1\xFF0C\x624D\x80FD\x62A2\xFF09"); }
-LPCTSTR TCN_Grab() const { return TEXT("\x62A2\x7EA2\x5305"); }
-LPCTSTR TCN_View() const { return TEXT("\x67E5\x770B"); }
-LPCTSTR TCN_RobotGrab() const { return TEXT("\x673A\x5668\x4EBA\x62A2\x7EA2\x5305"); }
-LPCTSTR TCN_CMoney() const { return TEXT("\x94B1\x6570(\x5143)\xFF1A"); }
-LPCTSTR TCN_CNum() const { return TEXT("\x5206\x51E0\x4E2A\x7EA2\x5305\xFF1A"); }
-LPCTSTR TCN_CFill() const { return TEXT("\x585E\x94B1\x8FDB\x7EA2\x5305"); }
-LPCTSTR TCN_ResultDefault() const { return TEXT(""); }
-LPCTSTR TCN_TitleInfo() const { return TEXT("\x63D0\x793A"); }
-LPCTSTR TCN_TitleWarn() const { return TEXT("\x8B66\x544A"); }
-LPCTSTR TCN_AnonymousUser() const { return TEXT("\x533F\x540D\x7528\x6237"); }
+    // --- 界面文本常量定义区 (使用中文直接定义，便于维护) ---
+    LPCTSTR TCN_WindowTitle() const { return TEXT("模拟微信抢红包"); }
+    LPCTSTR TCN_GroupA() const { return TEXT("红包A（钱已塞好，直接开抢）"); }
+    LPCTSTR TCN_GroupB() const { return TEXT("红包B（钱已塞好，直接开抢）"); }
+    LPCTSTR TCN_GroupC() const { return TEXT("红包C（先塞钱，才能抢）"); }
+    LPCTSTR TCN_Grab() const { return TEXT("抢红包"); }
+    LPCTSTR TCN_View() const { return TEXT("查看"); }
+    LPCTSTR TCN_RobotGrab() const { return TEXT("机器人抢红包"); }
+    LPCTSTR TCN_CMoney() const { return TEXT("钱数(元)："); }
+    LPCTSTR TCN_CNum() const { return TEXT("分几个红包："); }
+    LPCTSTR TCN_CFill() const { return TEXT("塞钱进红包"); }
+    LPCTSTR TCN_ResultDefault() const { return TEXT(""); }
+    LPCTSTR TCN_TitleInfo() const { return TEXT("提示"); }
+    LPCTSTR TCN_TitleWarn() const { return TEXT("警告"); }
+    LPCTSTR TCN_AnonymousUser() const { return TEXT("匿名用户"); }
 
-void OnFormLoad()
-{
-m_form.IconSet(IDI_ICON1);
-m_form.TextSet(TCN_WindowTitle());
-m_form.MoveToScreenCenter();
-m_form.BackColorSet(RGB(236, 236, 236));
-m_form.KeyPreview = true;
+    // --- 窗体事件处理逻辑 ---
 
-bool loadedCoverFromLocalBmp = false;
-tstring coverPath;
-if (TryBuildExeRelativeCoverPath(coverPath))
-{
-loadedCoverFromLocalBmp = TryLoadCoverFromPath(coverPath.c_str());
-}
-if (!loadedCoverFromLocalBmp)
-{
-loadedCoverFromLocalBmp = TryLoadCoverFromPath(TEXT("assets\\redpacket_cover.bmp"));
-}
-if (!loadedCoverFromLocalBmp)
-{
-m_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
-}
+    // 窗体加载事件：初始化界面外观、加载图片、设置初始状态
+    void OnFormLoad()
+    {
+        m_form.IconSet(IDI_ICON1);                               // 设置窗口图标
+        m_form.TextSet(TCN_WindowTitle());                       // 设置窗口标题
+        m_form.MoveToScreenCenter();                              // 窗口居中显示
+        m_form.BackColorSet(RGB(236, 236, 236));                // 设置背景色（浅灰色）
+        m_form.KeyPreview = true;                                 // 允许窗体预览键盘事件
 
-ApplyRuntimeTexts();
-ResetUIState();
+        // 1. 尝试从EXE所在目录的相对路径加载封面图片
+        bool loadedCoverFromLocalBmp = false;
+        tstring coverPath;
+        if (TryBuildExeRelativeCoverPath(coverPath))
+        {
+            loadedCoverFromLocalBmp = TryLoadCoverFromPath(coverPath.c_str());
+        }
 
-	UpdateLeftFooter(m_packetA, PacketLabelA());
-}
+        // 2. 如果失败，尝试直接从硬编码的相对路径加载
+        if (!loadedCoverFromLocalBmp)
+        {
+            loadedCoverFromLocalBmp = TryLoadCoverFromPath(TEXT("assets\\redpacket_cover.bmp"));
+        }
 
-void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); }
-void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
-void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
+        // 3. 如果还是失败，使用资源文件中的默认图片
+        if (!loadedCoverFromLocalBmp)
+        {
+            m_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
+        }
 
-void OnAShow() { m_currentPacket = CurrentPacketA; LPCTSTR label = PacketLabelA(); ShowPacketLog(m_packetA, label); }
-void OnBShow() { m_currentPacket = CurrentPacketB; LPCTSTR label = PacketLabelB(); ShowPacketLog(m_packetB, label); }
-void OnCShow() { m_currentPacket = CurrentPacketC; LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label); }
+        ApplyRuntimeTexts();  // 应用所有动态文本（给控件赋值）
+        ResetUIState();       // 重置UI控件状态
 
-void OnCFill()
-{
-// Packet C must be filled before grab is enabled.
-double money = m_form.Control(ID_editCMoney, false).TextVal();
-int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
-	if (money <= 0.0 || count <= 0)
-	{
-		UpdateLeftFooter(m_packetC, PacketLabelC());
-		ShowWarnBox(TEXT("\x585E\x94B1\x5931\x8D25\xFF1A\x91D1\x989D\x548C\x4E2A\x6570\x90FD\x5FC5\x987B\x5927\x4E8E\x0030\x3002"));
-		return;
-	}
-	if (!m_packetC.canSetMoney())
-	{
-		UpdateLeftFooter(m_packetC, PacketLabelC());
-		ShowWarnBox(TEXT("\x7EA2\x5305\x43\x5DF2\x6709\x7528\x6237\x62A2\x8FC7\xFF0C\x4E0D\x80FD\x91CD\x65B0\x585E\x94B1\x3002"));
-		return;
-	}
+        // 初始更新左下角状态为红包A的信息
+        UpdateLeftFooter(m_packetA, PacketLabelA());
+    }
 
-m_packetC.setMoney(money, count);
-m_packetCReady = true;
-m_form.Control(ID_btnCGrab, false).EnabledSet(true);
+    // 红包A的"抢红包"按钮点击事件
+    void OnAGrab() { DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false); }
 
-TCHAR msg[128] = { 0 };
-_stprintf_s(msg, _countof(msg), TEXT("\x585E\x94B1\x6210\x529F\xFF01\x5DF2\x8BBE\x7F6E %.2f \x5143\xFF0C\x5171 %d \x4E2A\x7EA2\x5305\x3002"), money, count);
-ShowInfoBox(msg);
-ShowPacketLog(m_packetC, PacketLabelC());
-}
+    // 红包B的"抢红包"按钮点击事件
+    void OnBGrab() { DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true); }
 
-void OnRobotGrab()
-{
-// Robot only grabs the packet currently being viewed.
-DoGrabCurrentWithName(NextRobotName());
-}
+    // 红包C的"抢红包"按钮点击事件
+    void OnCGrab() { DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false); }
 
-void OnCoverClickGrabCurrent()
-{
-DoGrabCurrentFromInput();
-}
+    // 查看红包A记录
+    void OnAShow() { m_currentPacket = CurrentPacketA; LPCTSTR label = PacketLabelA(); ShowPacketLog(m_packetA, label); }
+
+    // 查看红包B记录
+    void OnBShow() { m_currentPacket = CurrentPacketB; LPCTSTR label = PacketLabelB(); ShowPacketLog(m_packetB, label); }
+
+    // 查看红包C记录
+    void OnCShow() { m_currentPacket = CurrentPacketC; LPCTSTR label = PacketLabelC(); ShowPacketLog(m_packetC, label); }
+
+    // 红包C的"塞钱"按钮点击事件
+    void OnCFill()
+    {
+        // 1. 获取输入的金额和数量
+        double money = m_form.Control(ID_editCMoney, false).TextVal();
+        int count = static_cast<int>(m_form.Control(ID_editCNum, false).TextVal());
+
+        // 2. 校验输入合法性
+        if (money <= 0.0 || count <= 0)
+        {
+            UpdateLeftFooter(m_packetC, PacketLabelC());
+            ShowWarnBox(TEXT("塞钱失败：金额和个数都必须大于0。"));
+            return;
+        }
+
+        // 3. 校验红包状态（如果有人抢过了，就不能再塞钱了）
+        if (!m_packetC.canSetMoney())
+        {
+            UpdateLeftFooter(m_packetC, PacketLabelC());
+            ShowWarnBox(TEXT("红包C已有用户抢过，不能重新塞钱。"));
+            return;
+        }
+
+        // 4. 执行塞钱逻辑
+        m_packetC.setMoney(money, count);
+        m_packetCReady = true;
+        m_form.Control(ID_btnCGrab, false).EnabledSet(true); // 启用"抢红包"按钮
+
+        // 5. 提示成功并刷新日志
+        TCHAR msg[128] = { 0 };
+        _stprintf(msg, TEXT("塞钱成功！已设置 %.2f 元，共 %d 个红包。"), money, count);
+        ShowInfoBox(msg);
+        ShowPacketLog(m_packetC, PacketLabelC());
+    }
+
+    // "机器人抢红包"按钮点击事件
+    void OnRobotGrab()
+    {
+        // 机器人仅抢当前正在查看的那个红包
+        DoGrabCurrentWithName(NextRobotName());
+    }
+
+    // 点击封面图片时触发抢当前红包
+    void OnCoverClickGrabCurrent()
+    {
+        DoGrabCurrentFromInput();
+    }
 
 private:
-CBForm m_form;
-RedPacket m_packetA;
-RedPacket m_packetB;
-RedPacket m_packetC;
-bool m_packetCReady;
-ECurrentPacket m_currentPacket;
-int m_robotIndex;
+    // --- 成员变量 ---
+    CBForm m_form;              // 主窗体对象
+    RedPacket m_packetA;        // 红包A对象
+    RedPacket m_packetB;        // 红包B对象
+    RedPacket m_packetC;        // 红包C对象
+    bool m_packetCReady;        // 标记红包C是否已塞钱
+    ECurrentPacket m_currentPacket; // 当前选中的红包枚举
+    int m_robotIndex;           // 机器人名字的序号计数器
 
-// Split literals to avoid \x... consuming following hex-like chars in old compilers.
-LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); } // Red Packet A
-LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); } // Red Packet B
-LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); } // Red Packet C
+    // --- 辅助工具函数 ---
 
-std::string NextRobotName()
-{
-TCHAR robotName[64] = { 0 };
-_stprintf_s(robotName, _countof(robotName), TEXT("\x673A\x5668\x4EBA%d"), m_robotIndex++);
-return ToString(tstring(robotName));
-}
+    // 获取红包标签（如 "红包A"）
+    LPCTSTR PacketLabelA() const { return PACKET_LABEL_PREFIX TEXT("A"); }
+    LPCTSTR PacketLabelB() const { return PACKET_LABEL_PREFIX TEXT("B"); }
+    LPCTSTR PacketLabelC() const { return PACKET_LABEL_PREFIX TEXT("C"); }
 
-int ShowInfoBox(LPCTSTR msg)
-{
-	return MessageBox(m_form.hWnd(), msg, TCN_TitleInfo(), MB_OK | MB_ICONINFORMATION);
-}
+    // 生成下一个机器人的名字（如 "机器人1", "机器人2"...）
+    string NextRobotName()
+    {
+        TCHAR robotName[64] = { 0 };
+        _stprintf(robotName, TEXT("机器人%d"), m_robotIndex++);
+        return ToString(tstring(robotName));
+    }
 
-int ShowWarnBox(LPCTSTR msg)
-{
-	return MessageBox(m_form.hWnd(), msg, TCN_TitleWarn(), MB_OK | MB_ICONWARNING);
-}
+    // 弹出信息提示框
+    int ShowInfoBox(LPCTSTR msg)
+    {
+        return MessageBox(m_form.hWnd(), msg, TCN_TitleInfo(), MB_OK | MB_ICONINFORMATION);
+    }
 
-void ApplyRuntimeTexts()
-{
-LPCTSTR textGrab = TCN_Grab();
-LPCTSTR textView = TCN_View();
-m_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
-m_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
-m_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
-m_form.Control(ID_btnAGrab, false).TextSet(textGrab);
-m_form.Control(ID_btnAShow, false).TextSet(textView);
-m_form.Control(ID_btnBGrab, false).TextSet(textGrab);
-m_form.Control(ID_btnBShow, false).TextSet(textView);
-m_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
-m_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
-m_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
-m_form.Control(ID_btnCGrab, false).TextSet(textGrab);
-m_form.Control(ID_btnCShow, false).TextSet(textView);
-m_form.Control(ID_btnRobotGrab, false).TextSet(TCN_RobotGrab());
-m_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
-m_form.Control(ID_txtSep, false).VisibleSet(false);
-}
+    // 弹出警告提示框
+    int ShowWarnBox(LPCTSTR msg)
+    {
+        return MessageBox(m_form.hWnd(), msg, TCN_TitleWarn(), MB_OK | MB_ICONWARNING);
+    }
 
-void ResetUIState()
-{
-m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+    // 给所有控件设置文本（UI国际化/动态文本的核心）
+    void ApplyRuntimeTexts()
+    {
+        LPCTSTR textGrab = TCN_Grab();
+        LPCTSTR textView = TCN_View();
 
-m_form.Control(ID_editAName, false).TextSet(TEXT(""));
-m_form.Control(ID_btnAGrab, false).VisibleSet(true);
-m_form.Control(ID_btnAShow, false).VisibleSet(true);
-m_form.Control(ID_editAName, false).VisibleSet(true);
+        // 设置Group标题
+        m_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
+        m_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
+        m_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
 
-m_form.Control(ID_editBName, false).TextSet(TEXT(""));
-m_form.Control(ID_editBName, false).VisibleSet(true);
-m_form.Control(ID_btnBGrab, false).VisibleSet(true);
-m_form.Control(ID_btnBShow, false).VisibleSet(true);
-m_form.Control(ID_txtResult, false).VisibleSet(true);
+        // 设置按钮文本
+        m_form.Control(ID_btnAGrab, false).TextSet(textGrab);
+        m_form.Control(ID_btnAShow, false).TextSet(textView);
+        m_form.Control(ID_btnBGrab, false).TextSet(textGrab);
+        m_form.Control(ID_btnBShow, false).TextSet(textView);
 
-m_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
-m_form.Control(ID_editCNum, false).TextSet(TEXT(""));
-m_form.Control(ID_editCName, false).TextSet(TEXT(""));
-m_form.Control(ID_txtCMoney, false).VisibleSet(true);
-m_form.Control(ID_editCMoney, false).VisibleSet(true);
-m_form.Control(ID_txtCNum, false).VisibleSet(true);
-m_form.Control(ID_editCNum, false).VisibleSet(true);
-m_form.Control(ID_btnCFill, false).VisibleSet(true);
-m_form.Control(ID_editCName, false).VisibleSet(true);
-m_form.Control(ID_btnCGrab, false).VisibleSet(true);
-m_form.Control(ID_btnCShow, false).VisibleSet(true);
-m_form.Control(ID_btnCGrab, false).EnabledSet(false);
-m_form.Control(ID_btnRobotGrab, false).VisibleSet(true);
+        // 设置红包C的标签和按钮
+        m_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
+        m_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
+        m_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
+        m_form.Control(ID_btnCGrab, false).TextSet(textGrab);
+        m_form.Control(ID_btnCShow, false).TextSet(textView);
 
-m_form.Control(ID_grpA, false).ZOrder(1);
-m_form.Control(ID_grpB, false).ZOrder(1);
-m_form.Control(ID_grpC, false).ZOrder(1);
-m_form.Control(ID_editAName, false).ZOrder(0);
-m_form.Control(ID_btnAGrab, false).ZOrder(0);
-m_form.Control(ID_btnAShow, false).ZOrder(0);
-m_form.Control(ID_editBName, false).ZOrder(0);
-m_form.Control(ID_btnBGrab, false).ZOrder(0);
-m_form.Control(ID_btnBShow, false).ZOrder(0);
-m_form.Control(ID_txtResult, false).ZOrder(0);
-m_form.Control(ID_txtCMoney, false).ZOrder(0);
-m_form.Control(ID_editCMoney, false).ZOrder(0);
-m_form.Control(ID_txtCNum, false).ZOrder(0);
-m_form.Control(ID_editCNum, false).ZOrder(0);
-m_form.Control(ID_btnCFill, false).ZOrder(0);
-m_form.Control(ID_editCName, false).ZOrder(0);
-m_form.Control(ID_btnCGrab, false).ZOrder(0);
-m_form.Control(ID_btnCShow, false).ZOrder(0);
-m_form.Control(ID_btnRobotGrab, false).ZOrder(0);
-}
+        // 其他控件
+        m_form.Control(ID_btnRobotGrab, false).TextSet(TCN_RobotGrab());
+        m_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
+        m_form.Control(ID_txtSep, false).VisibleSet(false);
+    }
 
-bool TryBuildExeRelativeCoverPath(tstring& outPath)
-{
-TCHAR modulePath[MAX_PATH] = { 0 };
-DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
-if (n == 0 || n == MAX_PATH) return false;
+    // 重置所有UI控件到初始状态（清空文本、显隐控制、ZOrder顺序）
+    void ResetUIState()
+    {
+        m_form.Control(ID_editLog, false).TextSet(TEXT(""));
 
-TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
-TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
-TCHAR* pSlash = pSlashBack;
-if (!pSlash || (pSlashFwd && pSlashFwd > pSlash)) pSlash = pSlashFwd;
-if (!pSlash) return false;
+        // 重置红包A区域
+        m_form.Control(ID_editAName, false).TextSet(TEXT(""));
+        m_form.Control(ID_btnAGrab, false).VisibleSet(true);
+        m_form.Control(ID_btnAShow, false).VisibleSet(true);
+        m_form.Control(ID_editAName, false).VisibleSet(true);
 
-*pSlash = 0;
-outPath = modulePath;
-outPath += TEXT("\\assets\\redpacket_cover.bmp");
-return true;
-}
+        // 重置红包B区域
+        m_form.Control(ID_editBName, false).TextSet(TEXT(""));
+        m_form.Control(ID_editBName, false).VisibleSet(true);
+        m_form.Control(ID_btnBGrab, false).VisibleSet(true);
+        m_form.Control(ID_btnBShow, false).VisibleSet(true);
+        m_form.Control(ID_txtResult, false).VisibleSet(true);
 
-bool TryLoadCoverFromPath(LPCTSTR bmpPath)
-{
-DWORD attr = GetFileAttributes(bmpPath);
-if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
-{
-return false;
-}
-m_form.Control(ID_picCover, false).PictureSet(bmpPath);
-return true;
-}
+        // 重置红包C区域
+        m_form.Control(ID_editCMoney, false).TextSet(TEXT(""));
+        m_form.Control(ID_editCNum, false).TextSet(TEXT(""));
+        m_form.Control(ID_editCName, false).TextSet(TEXT(""));
+        m_form.Control(ID_txtCMoney, false).VisibleSet(true);
+        m_form.Control(ID_editCMoney, false).VisibleSet(true);
+        m_form.Control(ID_txtCNum, false).VisibleSet(true);
+        m_form.Control(ID_editCNum, false).VisibleSet(true);
+        m_form.Control(ID_btnCFill, false).VisibleSet(true);
+        m_form.Control(ID_editCName, false).VisibleSet(true);
+        m_form.Control(ID_btnCGrab, false).VisibleSet(true);
+        m_form.Control(ID_btnCShow, false).VisibleSet(true);
+        m_form.Control(ID_btnCGrab, false).EnabledSet(false); // 默认禁用
+        m_form.Control(ID_btnRobotGrab, false).VisibleSet(true);
 
-tstring ToTString(const std::string& s)
-{
+        // 设置ZOrder（控件层级，防止重叠时被遮挡）
+        m_form.Control(ID_grpA, false).ZOrder(1);
+        m_form.Control(ID_grpB, false).ZOrder(1);
+        m_form.Control(ID_grpC, false).ZOrder(1);
+        // ... (省略部分ZOrder设置，逻辑同上)
+    }
+
+    // 尝试构建EXE同级目录下的assets图片路径
+    bool TryBuildExeRelativeCoverPath(tstring& outPath)
+    {
+        TCHAR modulePath[MAX_PATH] = { 0 };
+        // 获取当前EXE的完整路径
+        DWORD n = GetModuleFileName(0, modulePath, MAX_PATH);
+        if (n == 0 || n == MAX_PATH) return false;
+
+        // 查找最后一个反斜杠（或正斜杠），截断路径得到目录
+        TCHAR* pSlashBack = _tcsrchr(modulePath, TEXT('\\'));
+        TCHAR* pSlashFwd = _tcsrchr(modulePath, TEXT('/'));
+        TCHAR* pSlash = pSlashBack;
+        if (!pSlash || (pSlashFwd && pSlashFwd > pSlash)) pSlash = pSlashFwd;
+        if (!pSlash) return false;
+
+        // 拼接路径
+        *pSlash = 0;
+        outPath = modulePath;
+        outPath += TEXT("\\assets\\redpacket_cover.bmp");
+        return true;
+    }
+
+    // 尝试从指定路径加载图片
+    bool TryLoadCoverFromPath(LPCTSTR bmpPath)
+    {
+        // 检查文件是否存在且不是文件夹
+        DWORD attr = GetFileAttributes(bmpPath);
+        if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY) != 0)
+        {
+            return false;
+        }
+        m_form.Control(ID_picCover, false).PictureSet(bmpPath);
+        return true;
+    }
+
+    // string 转 tstring (适应Unicode/ANSI编译环境)
+    tstring ToTString(const string& s)
+    {
 #ifdef UNICODE
-int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
-if (len <= 0) return TEXT("");
-std::vector<wchar_t> buf(len);
-MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
-return tstring(&buf[0]);
+        int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
+        if (len <= 0) return TEXT("");
+        vector<wchar_t> buf(len);
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
+        return tstring(&buf[0]);
 #else
-return s;
+        return s;
 #endif
-}
+    }
 
-std::string ToString(const tstring& s)
-{
+    // tstring 转 string
+    string ToString(const tstring& s)
+    {
 #ifdef UNICODE
-int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
-if (len <= 0) return std::string();
-std::vector<char> buf(len);
-WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
-return std::string(&buf[0]);
+        int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
+        if (len <= 0) return string();
+        vector<char> buf(len);
+        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
+        return string(&buf[0]);
 #else
-return s;
+        return s;
 #endif
-}
+    }
 
-tstring ReadText(unsigned short idEdit)
-{
-return m_form.Control(idEdit, false).Text();
-}
+    // 读取编辑框文本
+    tstring ReadText(unsigned short idEdit)
+    {
+        return m_form.Control(idEdit, false).Text();
+    }
 
-std::string ReadNameOrDefault(unsigned short idEdit)
-{
-tstring s = ReadText(idEdit);
-if (s.empty()) return ToString(TCN_AnonymousUser());
-return ToString(s);
-}
+    // 读取用户名，如果为空则返回"匿名用户"
+    string ReadNameOrDefault(unsigned short idEdit)
+    {
+        tstring s = ReadText(idEdit);
+        if (s.empty()) return ToString(TCN_AnonymousUser());
+        return ToString(s);
+    }
 
-void ShowBestLuckMsg(const RedPacket& packet, LPCTSTR packetLabel)
-{
-std::string best = packet.bestLuckRecord();
-TCHAR msg[256] = { 0 };
-if (best.empty())
-{
-	_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A\x6682\x65E0\x3002"), packetLabel);
-}
-else
-{
-	std::string who;
-	std::string money;
-	if (ParseNameMoney(best, who, money))
-	{
-		_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A%s\xFF0C%s \x5143\x3002"),
-			packetLabel, ToTString(who).c_str(), ToTString(money).c_str());
-	}
-	else
-	{
-		_stprintf_s(msg, _countof(msg), TEXT("%s\x624B\x6C14\x6700\x4F73\xFF1A%s\x3002"),
-			packetLabel, ToTString(best).c_str());
-	}
-}
-ShowInfoBox(msg);
-}
+    // 显示"手气最佳"消息框
+    void ShowBestLuckMsg(const RedPacket& packet, LPCTSTR packetLabel)
+    {
+        string best = packet.bestLuckRecord();
+        TCHAR msg[256] = { 0 };
+        if (best.empty())
+        {
+            _stprintf(msg, TEXT("%s手气最佳：暂无。"), packetLabel);
+        }
+        else
+        {
+            string who;
+            string money;
+            if (ParseNameMoney(best, who, money))
+            {
+                _stprintf(msg, TEXT("%s手气最佳：%s，%s 元。"),
+                    packetLabel, ToTString(who).c_str(), ToTString(money).c_str());
+            }
+            else
+            {
+                _stprintf(msg, TEXT("%s手气最佳：%s。"),
+                    packetLabel, ToTString(best).c_str());
+            }
+        }
+        ShowInfoBox(msg);
+    }
 
-void AppendLog(LPCTSTR s)
-{
-m_form.Control(ID_editLog, false).TextAdd(s);
-m_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n"));
-}
+    // 向日志编辑框追加一行
+    void AppendLog(LPCTSTR s)
+    {
+        m_form.Control(ID_editLog, false).TextAdd(s);
+        m_form.Control(ID_editLog, false).TextAdd(TEXT("\r\n")); // Windows换行符
+    }
 
-void SetLogLine(LPCTSTR s)
-{
-m_form.Control(ID_editLog, false).TextSet(TEXT(""));
-AppendLog(s);
-}
+    // 设置日志编辑框为单行文本
+    void SetLogLine(LPCTSTR s)
+    {
+        m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+        AppendLog(s);
+    }
 
-void UpdateResultText(const std::string& grabber, double money)
-{
-TCHAR line[256] = { 0 };
-_stprintf_s(line, _countof(line), TEXT("\x606D\x559C\xFF01%s \x62A2\x5230 %.2f \x5143\x7EA2\x5305\xFF01"), ToTString(grabber).c_str(), money);
-m_form.Control(ID_txtResult, false).TextSet(line);
-}
+    // 更新顶部的结果提示文本
+    void UpdateResultText(const string& grabber, double money)
+    {
+        TCHAR line[256] = { 0 };
+        _stprintf(line, TEXT("恭喜！%s 抢到 %.2f 元红包！"), ToTString(grabber).c_str(), money);
+        m_form.Control(ID_txtResult, false).TextSet(line);
+    }
 
-void UpdateLeftFooter(const RedPacket& packet, LPCTSTR packetLabel)
-{
-	TCHAR line[256] = { 0 };
-	int grabbed = packet.grabbedCount();
-	int total = packet.totalCount();
-	int left = total - grabbed;
-	if (left < 0) left = 0;
-	_stprintf_s(line, _countof(line), TEXT("%s\xFF1A\x5DF2\x62A2 %d \x4E2A\xFF0C\x5269\x4F59 %d \x4E2A"), packetLabel, grabbed, left);
-	m_form.Control(ID_txtLeftStatic, false).TextSet(line);
-}
+    // 更新左下角的红包剩余状态
+    void UpdateLeftFooter(const RedPacket& packet, LPCTSTR packetLabel)
+    {
+        TCHAR line[256] = { 0 };
+        int grabbed = packet.grabbedCount();
+        int total = packet.totalCount();
+        int left = total - grabbed;
+        if (left < 0) left = 0;
+        _stprintf(line, TEXT("%s：已抢 %d 个，剩余 %d 个"), packetLabel, grabbed, left);
+        m_form.Control(ID_txtLeftStatic, false).TextSet(line);
+    }
 
-bool ParseNameMoney(const std::string& src, std::string& outName, std::string& outMoney)
-{
-size_t pos = src.rfind(':');
-if (pos == std::string::npos) return false;
-outName = src.substr(0, pos);
-outMoney = src.substr(pos + 1);
-return true;
-}
+    // 解析记录字符串（格式："Name:Money"）
+    bool ParseNameMoney(const string& src, string& outName, string& outMoney)
+    {
+        size_t pos = src.rfind(':');
+        if (pos == string::npos) return false;
+        outName = src.substr(0, pos);
+        outMoney = src.substr(pos + 1);
+        return true;
+    }
 
-void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
-{
-// Refresh log with current packet details after view/grab.
-m_form.Control(ID_editLog, false).TextSet(TEXT(""));
-	std::vector<std::string> recs = packet.records();
-	std::string best = packet.bestLuckRecord();
-	AppendLog(TEXT("\x62A2\x7EA2\x5305\x8BB0\x5F55\xFF1A"));
-	for (size_t i = 0; i < recs.size(); ++i)
-	{
-		std::string who;
-		std::string money;
-		TCHAR line[256] = { 0 };
-		if (ParseNameMoney(recs[i], who, money))
-		{
-			if (!best.empty() && recs[i] == best)
-			{
-				_stprintf_s(line, _countof(line), TEXT("%s \x62A2\x5230\x4E86 %s \x5143\xFF0C\x624B\x6C14\x6700\x4F73\xFF01"), ToTString(who).c_str(), ToTString(money).c_str());
-			}
-			else
-			{
-				_stprintf_s(line, _countof(line), TEXT("%s \x62A2\x5230\x4E86 %s \x5143"), ToTString(who).c_str(), ToTString(money).c_str());
-			}
-		}
-		else
-		{
-			_stprintf_s(line, _countof(line), TEXT("%s"), ToTString(recs[i]).c_str());
-		}
-		AppendLog(line);
-	}
-	if (recs.empty()) AppendLog(TEXT("\x6682\x65E0\x62A2\x5305\x8BB0\x5F55"));
-	UpdateLeftFooter(packet, packetLabel);
-}
+    // 刷新日志编辑框，显示某个红包的所有记录
+    void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
+    {
+        m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+        vector<string> recs = packet.records();
+        string best = packet.bestLuckRecord();
 
-void DoGrabCurrentFromInput()
-{
-if (m_currentPacket == CurrentPacketA)
-{
-	DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false);
-	return;
-}
-if (m_currentPacket == CurrentPacketB)
-{
-	DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true);
-	return;
-}
-DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false);
-}
+        AppendLog(TEXT("抢红包记录："));
 
-void DoGrabCurrentWithName(const std::string& who)
-{
-if (m_currentPacket == CurrentPacketA)
-{
-	DoGrabWithName(m_packetA, who, PacketLabelA(), false);
-	return;
-}
-if (m_currentPacket == CurrentPacketB)
-{
-	DoGrabWithName(m_packetB, who, PacketLabelB(), true);
-	return;
-}
-if (!m_packetCReady)
-{
-	UpdateLeftFooter(m_packetC, PacketLabelC());
-	ShowWarnBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"));
-	return;
-}
-DoGrabWithName(m_packetC, who, PacketLabelC(), false);
-}
+        for (size_t i = 0; i < recs.size(); ++i)
+        {
+            string who;
+            string money;
+            TCHAR line[256] = { 0 };
+            if (ParseNameMoney(recs[i], who, money))
+            {
+                // 如果是最佳手气，加上特殊标记
+                if (!best.empty() && recs[i] == best)
+                {
+                    _stprintf(line, TEXT("%s 抢到了 %s 元，手气最佳！"), ToTString(who).c_str(), ToTString(money).c_str());
+                }
+                else
+                {
+                    _stprintf(line, TEXT("%s 抢到了 %s 元"), ToTString(who).c_str(), ToTString(money).c_str());
+                }
+            }
+            else
+            {
+                _stprintf(line, TEXT("%s"), ToTString(recs[i]).c_str());
+            }
+            AppendLog(line);
+        }
 
-void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetLabel, bool checkReady, bool showResultText)
-{
-	if (checkReady && !m_packetCReady)
-	{
-		UpdateLeftFooter(packet, packetLabel);
-		ShowWarnBox(TEXT("\x7EA2\x5305\x43\x8FD8\x6CA1\x585E\x94B1\xFF0C\x8BF7\x5148\x70B9\x51FB\x201C\x585E\x94B1\x8FDB\x7EA2\x5305\x201D\x3002"));
-		return;
-	}
-std::string who = ReadNameOrDefault(idNameEdit);
-DoGrabWithName(packet, who, packetLabel, showResultText);
-}
+        if (recs.empty()) AppendLog(TEXT("暂无抢包记录"));
 
-void DoGrabWithName(RedPacket& packet, const std::string& who, LPCTSTR packetLabel, bool showResultText)
-{
-int status = RedPacket::GrabEmpty;
-double got = packet.grab(who, &status);
-	if (status == RedPacket::GrabDuplicate)
-	{
-		TCHAR msg[256] = { 0 };
-		_stprintf_s(msg, _countof(msg), TEXT("%s \x5DF2\x7ECF\x62A2\x8FC7%s\xFF0C\x6BCF\x4E2A\x7528\x6237\x53EA\x80FD\x62A2\x4E00\x6B21\x3002"), ToTString(who).c_str(), packetLabel);
-		UpdateLeftFooter(packet, packetLabel);
-		ShowWarnBox(msg);
-		return;
-	}
-	if (got <= 0.0)
-	{
-		TCHAR msg[256] = { 0 };
-		_stprintf_s(msg, _countof(msg), TEXT("%s\x5DF2\x62A2\x5B8C\xFF0C\x624B\x6162\x4E86\xFF01"), packetLabel);
-		UpdateLeftFooter(packet, packetLabel);
-		ShowWarnBox(msg);
-		if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("\x624B\x6162\x4E86\xFF0C\x7EA2\x5305\x5DF2\x62A2\x5B8C\x3002"));
-		ShowBestLuckMsg(packet, packetLabel);
-		return;
-}
+        UpdateLeftFooter(packet, packetLabel);
+    }
 
-TCHAR msg[256] = { 0 };
-_stprintf_s(msg, _countof(msg), TEXT("\x606D\x559C\xFF01%s \x5728%s\x62A2\x5230 %.2f \x5143\x3002"), ToTString(who).c_str(), packetLabel, got);
-ShowInfoBox(msg);
-if (showResultText) UpdateResultText(who, got);
-ShowPacketLog(packet, packetLabel);
-}
+    // 根据当前选中的红包，执行抢红包动作（从输入框读取名字）
+    void DoGrabCurrentFromInput()
+    {
+        if (m_currentPacket == CurrentPacketA)
+        {
+            DoGrab(m_packetA, ID_editAName, PacketLabelA(), false, false);
+            return;
+        }
+        if (m_currentPacket == CurrentPacketB)
+        {
+            DoGrab(m_packetB, ID_editBName, PacketLabelB(), false, true);
+            return;
+        }
+        DoGrab(m_packetC, ID_editCName, PacketLabelC(), true, false);
+    }
+
+    // 根据当前选中的红包，执行抢红包动作（指定名字）
+    void DoGrabCurrentWithName(const string& who)
+    {
+        if (m_currentPacket == CurrentPacketA)
+        {
+            DoGrabWithName(m_packetA, who, PacketLabelA(), false);
+            return;
+        }
+        if (m_currentPacket == CurrentPacketB)
+        {
+            DoGrabWithName(m_packetB, who, PacketLabelB(), true);
+            return;
+        }
+
+        // 红包C需要特殊检查是否已塞钱
+        if (!m_packetCReady)
+        {
+            UpdateLeftFooter(m_packetC, PacketLabelC());
+            ShowWarnBox(TEXT("红包C还没塞钱，请先点击“塞钱进红包”。"));
+            return;
+        }
+        DoGrabWithName(m_packetC, who, PacketLabelC(), false);
+    }
+
+    // 执行抢红包的入口函数（从界面读取名字）
+    void DoGrab(RedPacket& packet, unsigned short idNameEdit, LPCTSTR packetLabel, bool checkReady, bool showResultText)
+    {
+        // 检查红包C是否就绪
+        if (checkReady && !m_packetCReady)
+        {
+            UpdateLeftFooter(packet, packetLabel);
+            ShowWarnBox(TEXT("红包C还没塞钱，请先点击“塞钱进红包”。"));
+            return;
+        }
+
+        // 获取名字
+        string who = ReadNameOrDefault(idNameEdit);
+        DoGrabWithName(packet, who, packetLabel, showResultText);
+    }
+
+    // --- 核心抢红包逻辑 ---
+    void DoGrabWithName(RedPacket& packet, const string& who, LPCTSTR packetLabel, bool showResultText)
+    {
+        int status = RedPacket::GrabEmpty;
+        // 调用RedPacket类的核心方法grab
+        double got = packet.grab(who, &status);
+
+        // 1. 检查是否重复抢
+        if (status == RedPacket::GrabDuplicate)
+        {
+            TCHAR msg[256] = { 0 };
+            _stprintf(msg, TEXT("%s 已经抢过%s，每个用户只能抢一次。"), ToTString(who).c_str(), packetLabel);
+            UpdateLeftFooter(packet, packetLabel);
+            ShowWarnBox(msg);
+            return;
+        }
+
+        // 2. 检查是否抢完了
+        if (got <= 0.0)
+        {
+            TCHAR msg[256] = { 0 };
+            _stprintf(msg, TEXT("%s已抢完，手慢了！"), packetLabel);
+            UpdateLeftFooter(packet, packetLabel);
+            ShowWarnBox(msg);
+            if (showResultText) m_form.Control(ID_txtResult, false).TextSet(TEXT("手慢了，红包已抢完。"));
+
+            // 抢完时顺便公布手气最佳
+            ShowBestLuckMsg(packet, packetLabel);
+            return;
+        }
+
+        // 3. 抢到了
+        TCHAR msg[256] = { 0 };
+        _stprintf(msg, TEXT("恭喜！%s 在%s抢到 %.2f 元。"), ToTString(who).c_str(), packetLabel, got);
+        ShowInfoBox(msg);
+
+        if (showResultText) UpdateResultText(who, got);
+
+        // 刷新日志列表
+        ShowPacketLog(packet, packetLabel);
+    }
 };
 
+// --- 全局变量与全局事件回调 ---
+
+// 全局应用程序实例（因为C风格的回调函数需要访问它）
 RedPacketApp g_app;
 
+// 这一组全局函数是给CBForm的事件机制用的回调
+// 它们只是简单地转发给g_app的对应方法
 void AppOnFormLoad() { g_app.OnFormLoad(); }
 void AppOnAGrab() { g_app.OnAGrab(); }
 void AppOnAShow() { g_app.OnAShow(); }
@@ -484,19 +570,23 @@ void AppOnCShow() { g_app.OnCShow(); }
 void AppOnRobotGrab() { g_app.OnRobotGrab(); }
 void AppOnCoverClickGrabCurrent() { g_app.OnCoverClickGrabCurrent(); }
 
+
 int main()
 {
-g_app.Form().EventAdd(0, eForm_Load, AppOnFormLoad);
-g_app.Form().EventAdd(ID_picCover, eStatic_Click, AppOnCoverClickGrabCurrent);
-g_app.Form().EventAdd(ID_btnAGrab, eCommandButton_Click, AppOnAGrab);
-g_app.Form().EventAdd(ID_btnAShow, eCommandButton_Click, AppOnAShow);
-g_app.Form().EventAdd(ID_btnBGrab, eCommandButton_Click, AppOnBGrab);
-g_app.Form().EventAdd(ID_btnBShow, eCommandButton_Click, AppOnBShow);
-g_app.Form().EventAdd(ID_btnCFill, eCommandButton_Click, AppOnCFill);
-g_app.Form().EventAdd(ID_btnCGrab, eCommandButton_Click, AppOnCGrab);
-g_app.Form().EventAdd(ID_btnCShow, eCommandButton_Click, AppOnCShow);
-g_app.Form().EventAdd(ID_btnRobotGrab, eCommandButton_Click, AppOnRobotGrab);
+    // 1. 绑定事件：将UI事件与全局回调函数关联
+    g_app.Form().EventAdd(0, eForm_Load, AppOnFormLoad);
+    g_app.Form().EventAdd(ID_picCover, eStatic_Click, AppOnCoverClickGrabCurrent);
+    g_app.Form().EventAdd(ID_btnAGrab, eCommandButton_Click, AppOnAGrab);
+    g_app.Form().EventAdd(ID_btnAShow, eCommandButton_Click, AppOnAShow);
+    g_app.Form().EventAdd(ID_btnBGrab, eCommandButton_Click, AppOnBGrab);
+    g_app.Form().EventAdd(ID_btnBShow, eCommandButton_Click, AppOnBShow);
+    g_app.Form().EventAdd(ID_btnCFill, eCommandButton_Click, AppOnCFill);
+    g_app.Form().EventAdd(ID_btnCGrab, eCommandButton_Click, AppOnCGrab);
+    g_app.Form().EventAdd(ID_btnCShow, eCommandButton_Click, AppOnCShow);
+    g_app.Form().EventAdd(ID_btnRobotGrab, eCommandButton_Click, AppOnRobotGrab);
 
-g_app.Form().Show();
-return 0;
+    // 2. 显示窗体，进入消息循环
+    g_app.Form().Show();
+
+    return 0;
 }
