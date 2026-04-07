@@ -283,6 +283,15 @@ static BOOL CALLBACK EnumChildProcSubClass(HWND hWnd, LPARAM lParam)
 			SetWindowLong( hWnd, GWL_STYLE,
 				GetWindowLong(hWnd, GWL_STYLE) | SS_NOTIFY ) ;
 		}
+		else if (_tcscmp(strClassName, TEXT("Button"))==0)
+		{
+			long styleBtn = GetWindowLong(hWnd, GWL_STYLE);
+			if (styleBtn & BS_GROUPBOX)
+			{
+				UINT flags = SWP_NOOWNERZORDER | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
+				SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, flags);
+			}
+		}
 		else if (_tcscmp(strClassName, TEXT("ComboBox"))==0)
 		{
 			// 修正 ComboBox 若高度太小不能拉下下拉框的问题

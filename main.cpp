@@ -125,15 +125,6 @@ static void SkipCurrentMode()
 	g_form.Control(ID_txtStatus, false).TextSet(wasWork ? TEXT("Switched to break") : TEXT("Switched to work"));
 }
 
-static void EnsureInteractiveControlsOnTop()
-{
-	g_form.Control(ID_editWorkMin, false).ZOrder(0);
-	g_form.Control(ID_editBreakMin, false).ZOrder(0);
-	g_form.Control(ID_btnStartPause, false).ZOrder(0);
-	g_form.Control(ID_btnReset, false).ZOrder(0);
-	g_form.Control(ID_btnSkip, false).ZOrder(0);
-}
-
 static void OnFormLoad()
 {
 	g_form.IconSet(IDI_ICON1);
@@ -149,7 +140,6 @@ static void OnFormLoad()
 
 	EnterMode(true);
 	g_form.Control(ID_txtStatus, false).TextSet(TEXT("Ready to focus"));
-	EnsureInteractiveControlsOnTop();
 }
 
 static void OnStartPauseClick()
