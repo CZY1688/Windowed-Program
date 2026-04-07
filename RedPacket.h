@@ -23,6 +23,7 @@ public:
 	void show() const;
 
 	string summary() const;
+	// Return internal fixed array pointer; valid element count is grabbedCount().
 	const string* records() const;
 	bool canSetMoney() const;
 	int grabbedCount() const;
@@ -30,6 +31,7 @@ public:
 	string bestLuckRecord() const;
 
 private:
+	// Copy is intentionally disabled because this class owns raw dynamic arrays.
 	RedPacket(const RedPacket&);
 	RedPacket& operator=(const RedPacket&);
 

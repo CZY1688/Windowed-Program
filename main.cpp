@@ -259,12 +259,12 @@ private:
     tstring ToTString(const string& s)
     {
 #ifdef UNICODE
-        int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
+        int srcLen = static_cast<int>(s.size());
+        int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), srcLen, 0, 0);
         if (len <= 0) return TEXT("");
         tstring out;
         out.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
-        if (!out.empty() && out[out.size() - 1] == 0) out.resize(out.size() - 1);
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), srcLen, &out[0], len);
         return out;
 #else
         return s;
@@ -275,12 +275,12 @@ private:
     string ToString(const tstring& s)
     {
 #ifdef UNICODE
-        int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
+        int srcLen = static_cast<int>(s.size());
+        int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), srcLen, 0, 0, 0, 0);
         if (len <= 0) return string();
         string out;
         out.resize(len);
-        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, 0, 0);
-        if (!out.empty() && out[out.size() - 1] == 0) out.resize(out.size() - 1);
+        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), srcLen, &out[0], len, 0, 0);
         return out;
 #else
         return s;

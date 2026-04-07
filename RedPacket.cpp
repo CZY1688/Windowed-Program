@@ -8,6 +8,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <cerrno>
+#include <assert.h>
 using namespace std;
 
 // File-local defaults to keep implementation details private.
@@ -55,8 +56,11 @@ void RedPacket::setMoney(double money, int packetNum)
 	arr = new string[num];
 	delete[] grabbed_names;
 	grabbed_names = new string[num];
-	for (int i = 0; i < num; ++i) arr[i].clear();
-	for (int i = 0; i < num; ++i) grabbed_names[i].clear();
+	for (int i = 0; i < num; ++i)
+	{
+		arr[i].clear();
+		grabbed_names[i].clear();
+	}
 	grabbed_name_count = 0;
 }
 
@@ -128,6 +132,7 @@ double RedPacket::grab(string grabberName, int* outStatus)
 	ostringstream oss;
 	oss << fixed << setprecision(2) << got;
 	arr[grabbed] = grabberName + ":" + oss.str();
+	assert(grabbed_name_count >= 0 && grabbed_name_count < num);
 	grabbed_names[grabbed_name_count] = grabberName;
 	++grabbed_name_count;
 	++grabbed;
