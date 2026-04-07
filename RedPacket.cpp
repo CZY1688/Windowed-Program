@@ -8,6 +8,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <cerrno>
+using namespace std;
 
 // File-local defaults to keep implementation details private.
 namespace
@@ -21,18 +22,21 @@ double RedPacket::Round2(double value) const
 	return static_cast<double>(static_cast<int>(value * 100.0 - 0.5)) / 100.0;
 }
 
-RedPacket::RedPacket(double money, int packetNum, std::string owner)
-	: total_money(money), num(packetNum > 0 ? packetNum : 1), grabbed(0), name(owner), arr(0)
+RedPacket::RedPacket(double money, int packetNum, string owner)
+	: total_money(money), num(packetNum > 0 ? packetNum : 1), grabbed(0), name(owner), arr(0), grabbed_names(0), grabbed_name_count(0)
 {
 	if (name.empty()) name = "Unknown";
 	if (total_money < 0.0) total_money = 0.0;
-	arr = new std::string[num];
+	arr = new string[num];
+	grabbed_names = new string[num];
 }
 
 RedPacket::~RedPacket()
 {
 	delete[] arr;
 	arr = 0;
+	delete[] grabbed_names;
+	grabbed_names = 0;
 }
 
 void RedPacket::setMoney(double money, int packetNum)
@@ -48,26 +52,30 @@ void RedPacket::setMoney(double money, int packetNum)
 	total_money = Round2(money);
 	num = packetNum;
 	delete[] arr;
-	arr = new std::string[num];
+	arr = new string[num];
+	delete[] grabbed_names;
+	grabbed_names = new string[num];
 	for (int i = 0; i < num; ++i) arr[i].clear();
-	grabbed_names.clear();
+	for (int i = 0; i < num; ++i) grabbed_names[i].clear();
+	grabbed_name_count = 0;
+	grabbed = 0;
 }
 
-double RedPacket::grab(std::string grabberName)
+double RedPacket::grab(string grabberName)
 {
 	return grab(grabberName, 0);
 }
 
-bool RedPacket::HasGrabbed(const std::string& grabberName) const
+bool RedPacket::HasGrabbed(const string& grabberName) const
 {
-	for (size_t i = 0; i < grabbed_names.size(); ++i)
+	for (int i = 0; i < grabbed_name_count; ++i)
 	{
 		if (grabbed_names[i] == grabberName) return true;
 	}
 	return false;
 }
 
-double RedPacket::grab(std::string grabberName, int* outStatus)
+double RedPacket::grab(string grabberName, int* outStatus)
 {
 	if (grabberName.empty()) grabberName = DEFAULT_GRABBER_NAME;
 	if (HasGrabbed(grabberName))
@@ -99,11 +107,11 @@ double RedPacket::grab(std::string grabberName, int* outStatus)
 		if (maxMoney > upperByRemain) maxMoney = upperByRemain;
 		if (maxMoney < minMoney) maxMoney = minMoney;
 
-		static thread_local std::mt19937 rng(std::random_device{}());
+		static thread_local mt19937 rng(random_device{}());
 		int minFen = static_cast<int>(minMoney * 100.0 + 0.5);
 		int maxFen = static_cast<int>(maxMoney * 100.0 + 0.5);
 		if (maxFen < minFen) maxFen = minFen;
-		std::uniform_int_distribution<int> distFen(minFen, maxFen);
+		uniform_int_distribution<int> distFen(minFen, maxFen);
 		got = static_cast<double>(distFen(rng)) / 100.0;
 		got = Round2(got);
 		if (got < minMoney) got = minMoney;
@@ -118,10 +126,14 @@ double RedPacket::grab(std::string grabberName, int* outStatus)
 	total_money = Round2(total_money - got);
 	if (total_money < 0.0) total_money = 0.0;
 
-	std::ostringstream oss;
-	oss << std::fixed << std::setprecision(2) << got;
+	ostringstream oss;
+	oss << fixed << setprecision(2) << got;
 	arr[grabbed] = grabberName + ":" + oss.str();
-	grabbed_names.push_back(grabberName);
+	if (grabbed_name_count < num)
+	{
+		grabbed_names[grabbed_name_count] = grabberName;
+		++grabbed_name_count;
+	}
 	++grabbed;
 	if (outStatus) *outStatus = GrabSuccess;
 	return got;
@@ -129,31 +141,29 @@ double RedPacket::grab(std::string grabberName, int* outStatus)
 
 void RedPacket::show() const
 {
-	std::string s = summary();
+	string s = summary();
 	OutputDebugStringA(s.c_str());
 }
 
-std::string RedPacket::summary() const
+string RedPacket::summary() const
 {
-	std::ostringstream oss;
+	ostringstream oss;
 	oss << "Owner: " << name << "\n";
-	oss << "Money left: " << std::fixed << std::setprecision(2) << total_money << " yuan\n";
+	oss << "Money left: " << fixed << setprecision(2) << total_money << " yuan\n";
 	oss << "Total packets: " << num << "\n";
 	oss << "Grabbed count: " << grabbed << "\n";
 	for (int i = 0; i < grabbed; ++i)
 	{
 		oss << "  " << i + 1 << ". " << arr[i] << " yuan\n";
 	}
-	std::string best = bestLuckRecord();
+	string best = bestLuckRecord();
 	if (!best.empty()) oss << "Best luck: " << best << " yuan\n";
 	return oss.str();
 }
 
-std::vector<std::string> RedPacket::records() const
+const string* RedPacket::records() const
 {
-	std::vector<std::string> out;
-	for (int i = 0; i < grabbed; ++i) out.push_back(arr[i]);
-	return out;
+	return arr;
 }
 
 bool RedPacket::canSetMoney() const
@@ -171,19 +181,19 @@ int RedPacket::totalCount() const
 	return num;
 }
 
-std::string RedPacket::bestLuckRecord() const
+string RedPacket::bestLuckRecord() const
 {
 	double bestMoney = -1.0;
-	std::string bestName;
+	string bestName;
 	for (int i = 0; i < grabbed; ++i)
 	{
 		size_t pos = arr[i].find(':');
-		if (pos == std::string::npos) continue;
-		std::string who = arr[i].substr(0, pos);
-		std::string moneyText = arr[i].substr(pos + 1);
+		if (pos == string::npos) continue;
+		string who = arr[i].substr(0, pos);
+		string moneyText = arr[i].substr(pos + 1);
 		char* pEnd = 0;
 		errno = 0;
-		double money = std::strtod(moneyText.c_str(), &pEnd);
+		double money = strtod(moneyText.c_str(), &pEnd);
 		if (pEnd == moneyText.c_str() || errno == ERANGE) continue;
 		if (money > bestMoney)
 		{
@@ -191,8 +201,8 @@ std::string RedPacket::bestLuckRecord() const
 			bestName = who;
 		}
 	}
-	if (bestMoney < 0.0 || bestName.empty()) return std::string();
-	std::ostringstream oss;
-	oss << bestName << ":" << std::fixed << std::setprecision(2) << bestMoney;
+	if (bestMoney < 0.0 || bestName.empty()) return string();
+	ostringstream oss;
+	oss << bestName << ":" << fixed << setprecision(2) << bestMoney;
 	return oss.str();
 }

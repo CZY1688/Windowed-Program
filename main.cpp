@@ -3,7 +3,6 @@
 #include "RedPacket.h"   // 红包逻辑类头文件，提供RedPacket类处理金额、拆分、记录等核心逻辑
 #include <strsafe.h>    // 安全字符串操作库（虽然保留了头文件，但下面未使用其函数）
 #include <tchar.h>      // TCHAR宏定义，支持Unicode和多字节字符集切换
-#include <vector>       // 标准库vector容器
 
 using namespace std;  // 简化标准库调用（如vector不用写std::vector）
 
@@ -40,18 +39,7 @@ public:
         return m_form;
     }
 
-    // --- 界面文本常量定义区 (使用中文直接定义，便于维护) ---
-    LPCTSTR TCN_WindowTitle() const { return TEXT("模拟微信抢红包"); }
-    LPCTSTR TCN_GroupA() const { return TEXT("红包A（钱已塞好，直接开抢）"); }
-    LPCTSTR TCN_GroupB() const { return TEXT("红包B（钱已塞好，直接开抢）"); }
-    LPCTSTR TCN_GroupC() const { return TEXT("红包C（先塞钱，才能抢）"); }
-    LPCTSTR TCN_Grab() const { return TEXT("抢红包"); }
-    LPCTSTR TCN_View() const { return TEXT("查看"); }
-    LPCTSTR TCN_RobotGrab() const { return TEXT("机器人抢红包"); }
-    LPCTSTR TCN_CMoney() const { return TEXT("钱数(元)："); }
-    LPCTSTR TCN_CNum() const { return TEXT("分几个红包："); }
-    LPCTSTR TCN_CFill() const { return TEXT("塞钱进红包"); }
-    LPCTSTR TCN_ResultDefault() const { return TEXT(""); }
+    // --- 界面文本常量定义区 ---
     LPCTSTR TCN_TitleInfo() const { return TEXT("提示"); }
     LPCTSTR TCN_TitleWarn() const { return TEXT("警告"); }
     LPCTSTR TCN_AnonymousUser() const { return TEXT("匿名用户"); }
@@ -62,7 +50,6 @@ public:
     void OnFormLoad()
     {
         m_form.IconSet(IDI_ICON1);                               // 设置窗口图标
-        m_form.TextSet(TCN_WindowTitle());                       // 设置窗口标题
         m_form.MoveToScreenCenter();                              // 窗口居中显示
         m_form.BackColorSet(RGB(236, 236, 236));                // 设置背景色（浅灰色）
         m_form.KeyPreview = true;                                 // 允许窗体预览键盘事件
@@ -87,7 +74,6 @@ public:
             m_form.Control(ID_picCover, false).PictureSet(IDB_PACKET_COVER);
         }
 
-        ApplyRuntimeTexts();  // 应用所有动态文本（给控件赋值）
         ResetUIState();       // 重置UI控件状态
 
         // 初始更新左下角状态为红包A的信息
@@ -197,40 +183,12 @@ private:
         return MessageBox(m_form.hWnd(), msg, TCN_TitleWarn(), MB_OK | MB_ICONWARNING);
     }
 
-    // 给所有控件设置文本（UI国际化/动态文本的核心）
-    void ApplyRuntimeTexts()
-    {
-        LPCTSTR textGrab = TCN_Grab();
-        LPCTSTR textView = TCN_View();
-
-        // 设置Group标题
-        m_form.Control(ID_grpA, false).TextSet(TCN_GroupA());
-        m_form.Control(ID_grpB, false).TextSet(TCN_GroupB());
-        m_form.Control(ID_grpC, false).TextSet(TCN_GroupC());
-
-        // 设置按钮文本
-        m_form.Control(ID_btnAGrab, false).TextSet(textGrab);
-        m_form.Control(ID_btnAShow, false).TextSet(textView);
-        m_form.Control(ID_btnBGrab, false).TextSet(textGrab);
-        m_form.Control(ID_btnBShow, false).TextSet(textView);
-
-        // 设置红包C的标签和按钮
-        m_form.Control(ID_txtCMoney, false).TextSet(TCN_CMoney());
-        m_form.Control(ID_txtCNum, false).TextSet(TCN_CNum());
-        m_form.Control(ID_btnCFill, false).TextSet(TCN_CFill());
-        m_form.Control(ID_btnCGrab, false).TextSet(textGrab);
-        m_form.Control(ID_btnCShow, false).TextSet(textView);
-
-        // 其他控件
-        m_form.Control(ID_btnRobotGrab, false).TextSet(TCN_RobotGrab());
-        m_form.Control(ID_txtResult, false).TextSet(TCN_ResultDefault());
-        m_form.Control(ID_txtSep, false).VisibleSet(false);
-    }
-
     // 重置所有UI控件到初始状态（清空文本、显隐控制、ZOrder顺序）
     void ResetUIState()
     {
         m_form.Control(ID_editLog, false).TextSet(TEXT(""));
+        m_form.Control(ID_txtResult, false).TextSet(TEXT(""));
+        m_form.Control(ID_txtSep, false).VisibleSet(false);
 
         // 重置红包A区域
         m_form.Control(ID_editAName, false).TextSet(TEXT(""));
@@ -260,11 +218,6 @@ private:
         m_form.Control(ID_btnCGrab, false).EnabledSet(false); // 默认禁用
         m_form.Control(ID_btnRobotGrab, false).VisibleSet(true);
 
-        // 设置ZOrder（控件层级，防止重叠时被遮挡）
-        m_form.Control(ID_grpA, false).ZOrder(1);
-        m_form.Control(ID_grpB, false).ZOrder(1);
-        m_form.Control(ID_grpC, false).ZOrder(1);
-        // ... (省略部分ZOrder设置，逻辑同上)
     }
 
     // 尝试构建EXE同级目录下的assets图片路径
@@ -308,9 +261,11 @@ private:
 #ifdef UNICODE
         int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
         if (len <= 0) return TEXT("");
-        vector<wchar_t> buf(len);
-        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &buf[0], len);
-        return tstring(&buf[0]);
+        wchar_t* buf = new wchar_t[len];
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, buf, len);
+        tstring out = buf;
+        delete[] buf;
+        return out;
 #else
         return s;
 #endif
@@ -322,9 +277,11 @@ private:
 #ifdef UNICODE
         int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
         if (len <= 0) return string();
-        vector<char> buf(len);
-        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &buf[0], len, 0, 0);
-        return string(&buf[0]);
+        char* buf = new char[len];
+        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, buf, len, 0, 0);
+        string out = buf;
+        delete[] buf;
+        return out;
 #else
         return s;
 #endif
@@ -419,12 +376,13 @@ private:
     void ShowPacketLog(const RedPacket& packet, LPCTSTR packetLabel)
     {
         m_form.Control(ID_editLog, false).TextSet(TEXT(""));
-        vector<string> recs = packet.records();
+        const string* recs = packet.records();
+        int recCount = packet.grabbedCount();
         string best = packet.bestLuckRecord();
 
         AppendLog(TEXT("抢红包记录："));
 
-        for (size_t i = 0; i < recs.size(); ++i)
+        for (int i = 0; i < recCount; ++i)
         {
             string who;
             string money;
@@ -448,7 +406,7 @@ private:
             AppendLog(line);
         }
 
-        if (recs.empty()) AppendLog(TEXT("暂无抢包记录"));
+        if (recCount == 0) AppendLog(TEXT("暂无抢包记录"));
 
         UpdateLeftFooter(packet, packetLabel);
     }
