@@ -4,7 +4,7 @@
 #include <strsafe.h>    // 安全字符串操作库（虽然保留了头文件，但下面未使用其函数）
 #include <tchar.h>      // TCHAR宏定义，支持Unicode和多字节字符集切换
 
-using namespace std;  // 简化标准库调用（如vector不用写std::vector）
+using namespace std;  // 简化标准库调用
 
 // 定义红包UI标签的前缀
 #define PACKET_LABEL_PREFIX TEXT("红包")
