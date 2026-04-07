@@ -30,6 +30,9 @@ public:
 	string bestLuckRecord() const;
 
 private:
+	RedPacket(const RedPacket&);
+	RedPacket& operator=(const RedPacket&);
+
 	double total_money;
 	int num;
 	int grabbed;

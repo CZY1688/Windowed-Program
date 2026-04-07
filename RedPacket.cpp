@@ -58,7 +58,6 @@ void RedPacket::setMoney(double money, int packetNum)
 	for (int i = 0; i < num; ++i) arr[i].clear();
 	for (int i = 0; i < num; ++i) grabbed_names[i].clear();
 	grabbed_name_count = 0;
-	grabbed = 0;
 }
 
 double RedPacket::grab(string grabberName)
@@ -129,11 +128,8 @@ double RedPacket::grab(string grabberName, int* outStatus)
 	ostringstream oss;
 	oss << fixed << setprecision(2) << got;
 	arr[grabbed] = grabberName + ":" + oss.str();
-	if (grabbed_name_count < num)
-	{
-		grabbed_names[grabbed_name_count] = grabberName;
-		++grabbed_name_count;
-	}
+	grabbed_names[grabbed_name_count] = grabberName;
+	++grabbed_name_count;
 	++grabbed;
 	if (outStatus) *outStatus = GrabSuccess;
 	return got;

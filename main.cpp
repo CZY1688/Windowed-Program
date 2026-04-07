@@ -261,10 +261,10 @@ private:
 #ifdef UNICODE
         int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, 0, 0);
         if (len <= 0) return TEXT("");
-        wchar_t* buf = new wchar_t[len];
-        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, buf, len);
-        tstring out = buf;
-        delete[] buf;
+        tstring out;
+        out.resize(len);
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
+        if (!out.empty() && out[out.size() - 1] == 0) out.resize(out.size() - 1);
         return out;
 #else
         return s;
@@ -277,10 +277,10 @@ private:
 #ifdef UNICODE
         int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, 0, 0, 0, 0);
         if (len <= 0) return string();
-        char* buf = new char[len];
-        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, buf, len, 0, 0);
-        string out = buf;
-        delete[] buf;
+        string out;
+        out.resize(len);
+        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, 0, 0);
+        if (!out.empty() && out[out.size() - 1] == 0) out.resize(out.size() - 1);
         return out;
 #else
         return s;
