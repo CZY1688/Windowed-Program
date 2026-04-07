@@ -2,7 +2,7 @@
 #define REDPACKET_H
 
 #include <string>
-#include <vector>
+using namespace std;
 
 class RedPacket
 {
@@ -14,31 +14,37 @@ public:
 		GrabDuplicate = -1
 	};
 
-	RedPacket(double money = 0.0, int packetNum = 1, std::string owner = "Unknown");
+	RedPacket(double money = 0.0, int packetNum = 1, string owner = "Unknown");
 	~RedPacket();
 
 	void setMoney(double money, int packetNum);
-	double grab(std::string grabberName);
-	double grab(std::string grabberName, int* outStatus);
+	double grab(string grabberName);
+	double grab(string grabberName, int* outStatus);
 	void show() const;
 
-	std::string summary() const;
-	std::vector<std::string> records() const;
+	string summary() const;
+	// Return internal fixed array pointer; valid element count is grabbedCount().
+	const string* records() const;
 	bool canSetMoney() const;
 	int grabbedCount() const;
 	int totalCount() const;
-	std::string bestLuckRecord() const;
+	string bestLuckRecord() const;
 
 private:
+	// Copy is intentionally disabled because this class owns raw dynamic arrays.
+	RedPacket(const RedPacket&);
+	RedPacket& operator=(const RedPacket&);
+
 	double total_money;
 	int num;
 	int grabbed;
-	std::string name;
-	std::string* arr;
-	std::vector<std::string> grabbed_names;
+	string name;
+	string* arr;
+	string* grabbed_names;
+	int grabbed_name_count;
 
 	double Round2(double value) const;
-	bool HasGrabbed(const std::string& grabberName) const;
+	bool HasGrabbed(const string& grabberName) const;
 };
 
 #endif
